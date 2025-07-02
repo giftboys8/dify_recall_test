@@ -18,6 +18,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+from dataclasses import asdict
 
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
@@ -312,13 +313,24 @@ class WebInterface:
             try:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 
+                # Convert RecallResult objects to dictionaries for serialization
+                results_data = []
+                for result in self.test_results:
+                    if hasattr(result, '__dict__'):
+                        # Convert RecallResult object to dictionary
+                        result_dict = asdict(result) if hasattr(result, '__dataclass_fields__') else result.__dict__
+                        results_data.append(result_dict)
+                    else:
+                        # Already a dictionary
+                        results_data.append(result)
+                
                 if format_type == 'csv':
                     # Create temporary CSV file
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
                         # Use results manager to save CSV
                         from ..utils import ResultsManager
                         results_manager = ResultsManager()
-                        csv_path = results_manager.save_csv(self.test_results, self.test_cases, f.name)
+                        csv_path = results_manager.save_csv(results_data, self.test_cases, f.name)
                         
                         return send_file(
                             csv_path,
@@ -332,7 +344,7 @@ class WebInterface:
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
                         from ..utils import ResultsManager
                         results_manager = ResultsManager()
-                        json_path = results_manager.save_json(self.test_results, self.test_cases, f.name)
+                        json_path = results_manager.save_json(results_data, self.test_cases, f.name)
                         
                         return send_file(
                             json_path,

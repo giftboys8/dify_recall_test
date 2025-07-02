@@ -324,6 +324,35 @@ class ResultsManager:
         
         self.logger.info(f"Cleanup completed. Deleted {deleted_count} old result files.")
         return deleted_count
+    
+    # Alias methods for backward compatibility
+    def save_csv(self, results: List[Dict[str, Any]], test_cases: List[Dict[str, Any]] = None, filename: Optional[str] = None) -> str:
+        """
+        Alias for save_results_csv method.
+        
+        Args:
+            results: List of test result dictionaries
+            test_cases: List of test case dictionaries (optional)
+            filename: Output filename (auto-generated if None)
+        
+        Returns:
+            Path to saved CSV file
+        """
+        return self.save_results_csv(results, filename)
+    
+    def save_json(self, results: List[Dict[str, Any]], test_cases: List[Dict[str, Any]] = None, filename: Optional[str] = None) -> str:
+        """
+        Alias for save_results_json method.
+        
+        Args:
+            results: List of test result dictionaries
+            test_cases: List of test case dictionaries (optional)
+            filename: Output filename (auto-generated if None)
+        
+        Returns:
+            Path to saved JSON file
+        """
+        return self.save_results_json(results, filename)
 
 
 def save_results(
