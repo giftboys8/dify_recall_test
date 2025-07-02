@@ -8,8 +8,8 @@
     "score_threshold_enabled": false,
     "reranking_enabled": true,
     "reranking_model": {
-      "provider": "cohere",
-      "model": "rerank-multilingual-v3.0"
+      "provider": "",
+      "model": ""
     }
   },
   "output_settings": {

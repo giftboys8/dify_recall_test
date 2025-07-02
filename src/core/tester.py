@@ -33,13 +33,13 @@ from ..utils import (
 
 # 导入必要的模块
 import logging
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import statistics
 from dataclasses import dataclass
 
 # 设置中文字体支持
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
+# plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+# plt.rcParams['axes.unicode_minus'] = False
 
 # 配置日志
 logging.basicConfig(
@@ -63,8 +63,8 @@ class TestConfig:
     score_threshold_enabled: bool = False
     score_threshold: float = 0.0
     reranking_enabled: bool = True
-    reranking_provider: str = "cohere"
-    reranking_model: str = "rerank-multilingual-v3.0"
+    reranking_provider: str = ""
+    reranking_model: str = ""
     output_prefix: str = "recall_test"
     save_csv: bool = True
     save_detailed_json: bool = True
@@ -177,8 +177,8 @@ class EnhancedDifyRecallTester(LoggerMixin):
         self.reranking_enabled = test_settings.get('reranking_enabled', True)
         self.search_method = test_settings.get('search_method', 'semantic_search')
         self.reranking_model = test_settings.get('reranking_model', {
-            "provider": "cohere",
-            "model": "rerank-multilingual-v3.0"
+            "provider": "",
+            "model": ""
         })
         self.hybrid_search_weights = test_settings.get('hybrid_search_weights', {
             "semantic_weight": 0.8,

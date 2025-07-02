@@ -112,7 +112,7 @@ make run-test
 
 ```bash
 # 启动Web服务器
-python main.py web-server --port 8080
+python main.py web --port 8080
 
 # 或使用Makefile
 make run-web
@@ -294,10 +294,15 @@ id,query,category,description
 
 ```json
 "reranking_model": {
-  "provider": "cohere",
-  "model": "rerank-multilingual-v3.0"
+  "provider": "jina",
+  "model": "jina-reranker-v2-base-multilingual"
 }
 ```
+
+支持的重排序提供商：
+- `openai`: OpenAI重排序模型
+- `cohere`: Cohere重排序模型  
+- `jina`: Jina重排序模型（推荐使用 `jina-reranker-v2-base-multilingual`）
 
 ### 设置分数阈值
 

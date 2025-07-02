@@ -44,6 +44,16 @@ class DifyTestApp {
         document.getElementById('rerankingEnabled').addEventListener('change', () => {
             this.updateAdvancedSettingsUI();
         });
+        
+        document.getElementById('rerankingProvider').addEventListener('change', (e) => {
+            const provider = e.target.value;
+            const modelInput = document.getElementById('rerankingModel');
+            if (provider === 'jina') {
+                modelInput.value = 'jina-reranker-v2-base-multilingual';
+            } else {
+                modelInput.value = '';
+            }
+        });
     }
 
     async loadConfig() {
@@ -75,8 +85,8 @@ class DifyTestApp {
         // Reranking settings
         document.getElementById('rerankingEnabled').checked = testSettings.reranking_enabled !== false;
         const rerankingModel = testSettings.reranking_model || {};
-        document.getElementById('rerankingProvider').value = rerankingModel.provider || 'zhipuai';
-        document.getElementById('rerankingModel').value = rerankingModel.model || 'rerank-v1';
+        document.getElementById('rerankingProvider').value = rerankingModel.provider || '';
+        document.getElementById('rerankingModel').value = rerankingModel.model || (rerankingModel.provider === 'jina' ? 'jina-reranker-v2-base-multilingual' : '');
         
         // Embedding settings
         const embeddingModel = testSettings.embedding_model || {};

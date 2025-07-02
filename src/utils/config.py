@@ -92,8 +92,8 @@ class ConfigManager:
                 'reranking_enabled': True,
                 'search_method': 'semantic_search',
                 'reranking_model': {
-                    'provider': 'cohere',
-                    'model': 'rerank-multilingual-v3.0'
+                    'provider': '',
+                    'model': ''
                 },
                 'hybrid_search_weights': {
                     'semantic_weight': 0.8,
@@ -199,8 +199,8 @@ class ConfigManager:
                 "reranking_enabled": True,
                 "search_method": "semantic_search",
                 "reranking_model": {
-                    "provider": "cohere",
-                    "model": "rerank-multilingual-v3.0"
+                    "provider": "",
+                    "model": ""
                 },
                 "hybrid_search_weights": {
                     "semantic_weight": 0.8,

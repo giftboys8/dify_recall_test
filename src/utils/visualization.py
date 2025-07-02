@@ -13,10 +13,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-from matplotlib.figure import Figure
+# import seaborn as sns
+# from matplotlib.figure import Figure
 
 from .logger import get_logger
 
@@ -38,8 +38,8 @@ class VisualizationGenerator:
         self.logger = get_logger(self.__class__.__name__)
         
         # Set style
-        plt.style.use('seaborn-v0_8')
-        sns.set_palette("husl")
+        # plt.style.use('seaborn-v0_8')
+        # sns.set_palette("husl")
     
     def generate_score_distribution(self, df: pd.DataFrame, save_path: Optional[str] = None) -> str:
         """
@@ -52,47 +52,50 @@ class VisualizationGenerator:
         Returns:
             Path to saved plot
         """
+        # Temporarily disabled due to matplotlib dependency issues
+        self.logger.warning("Visualization temporarily disabled due to matplotlib dependency issues")
         if save_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             save_path = self.output_dir / f"score_distribution_{timestamp}.png"
-        
-        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle('Score Distribution Analysis', fontsize=16, fontweight='bold')
-        
-        # Max score distribution
-        axes[0, 0].hist(df['max_score'], bins=20, alpha=0.7, color='skyblue', edgecolor='black')
-        axes[0, 0].set_title('Max Score Distribution')
-        axes[0, 0].set_xlabel('Max Score')
-        axes[0, 0].set_ylabel('Frequency')
-        axes[0, 0].grid(True, alpha=0.3)
-        
-        # Min score distribution
-        axes[0, 1].hist(df['min_score'], bins=20, alpha=0.7, color='lightcoral', edgecolor='black')
-        axes[0, 1].set_title('Min Score Distribution')
-        axes[0, 1].set_xlabel('Min Score')
-        axes[0, 1].set_ylabel('Frequency')
-        axes[0, 1].grid(True, alpha=0.3)
-        
-        # Average score distribution
-        axes[1, 0].hist(df['avg_score'], bins=20, alpha=0.7, color='lightgreen', edgecolor='black')
-        axes[1, 0].set_title('Average Score Distribution')
-        axes[1, 0].set_xlabel('Average Score')
-        axes[1, 0].set_ylabel('Frequency')
-        axes[1, 0].grid(True, alpha=0.3)
-        
-        # Box plot comparison
-        score_data = [df['max_score'], df['avg_score'], df['min_score']]
-        axes[1, 1].boxplot(score_data, labels=['Max', 'Avg', 'Min'])
-        axes[1, 1].set_title('Score Comparison')
-        axes[1, 1].set_ylabel('Score')
-        axes[1, 1].grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        self.logger.info(f"Score distribution plot saved to {save_path}")
         return str(save_path)
+        
+        # fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        # fig.suptitle('Score Distribution Analysis', fontsize=16, fontweight='bold')
+        # 
+        # # Max score distribution
+        # axes[0, 0].hist(df['max_score'], bins=20, alpha=0.7, color='skyblue', edgecolor='black')
+        # axes[0, 0].set_title('Max Score Distribution')
+        # axes[0, 0].set_xlabel('Max Score')
+        # axes[0, 0].set_ylabel('Frequency')
+        # axes[0, 0].grid(True, alpha=0.3)
+        # 
+        # # Min score distribution
+        # axes[0, 1].hist(df['min_score'], bins=20, alpha=0.7, color='lightcoral', edgecolor='black')
+        # axes[0, 1].set_title('Min Score Distribution')
+        # axes[0, 1].set_xlabel('Min Score')
+        # axes[0, 1].set_ylabel('Frequency')
+        # axes[0, 1].grid(True, alpha=0.3)
+        # 
+        # # Average score distribution
+        # axes[1, 0].hist(df['avg_score'], bins=20, alpha=0.7, color='lightgreen', edgecolor='black')
+        # axes[1, 0].set_title('Average Score Distribution')
+        # axes[1, 0].set_xlabel('Average Score')
+        # axes[1, 0].set_ylabel('Frequency')
+        # axes[1, 0].grid(True, alpha=0.3)
+        # 
+        # # Box plot comparison
+        # score_data = [df['max_score'], df['avg_score'], df['min_score']]
+        # axes[1, 1].boxplot(score_data, labels=['Max', 'Avg', 'Min'])
+        # axes[1, 1].set_title('Score Comparison')
+        # axes[1, 1].set_ylabel('Score')
+        # axes[1, 1].grid(True, alpha=0.3)
+        # 
+        # plt.tight_layout()
+        # plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        # plt.close()
+        # 
+        # self.logger.info(f"Score distribution plot saved to {save_path}")
+        # return str(save_path)
     
     def generate_recall_performance(self, df: pd.DataFrame, save_path: Optional[str] = None) -> str:
         """
@@ -105,65 +108,21 @@ class VisualizationGenerator:
         Returns:
             Path to saved plot
         """
+        # Temporarily disabled due to matplotlib dependency issues
+        self.logger.warning("Visualization temporarily disabled due to matplotlib dependency issues")
         if save_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             save_path = self.output_dir / f"recall_performance_{timestamp}.png"
-        
-        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle('Recall Performance Analysis', fontsize=16, fontweight='bold')
-        
-        # Documents recalled per query
-        axes[0, 0].bar(range(len(df)), df['documents_count'], alpha=0.7, color='steelblue')
-        axes[0, 0].set_title('Documents Recalled per Query')
-        axes[0, 0].set_xlabel('Query Index')
-        axes[0, 0].set_ylabel('Number of Documents')
-        axes[0, 0].grid(True, alpha=0.3)
-        
-        # Success rate by category (if category exists)
-        if 'category' in df.columns:
-            category_stats = df.groupby('category').agg({
-                'status': lambda x: (x == 'success').sum(),
-                'id': 'count'
-            }).reset_index()
-            category_stats['success_rate'] = category_stats['status'] / category_stats['id'] * 100
-            
-            axes[0, 1].bar(category_stats['category'], category_stats['success_rate'], 
-                          alpha=0.7, color='orange')
-            axes[0, 1].set_title('Success Rate by Category')
-            axes[0, 1].set_xlabel('Category')
-            axes[0, 1].set_ylabel('Success Rate (%)')
-            axes[0, 1].tick_params(axis='x', rotation=45)
-            axes[0, 1].grid(True, alpha=0.3)
-        else:
-            axes[0, 1].text(0.5, 0.5, 'No category data available', 
-                           ha='center', va='center', transform=axes[0, 1].transAxes)
-            axes[0, 1].set_title('Category Analysis')
-        
-        # Score vs Documents Count scatter
-        axes[1, 0].scatter(df['documents_count'], df['avg_score'], alpha=0.6, color='purple')
-        axes[1, 0].set_title('Average Score vs Documents Count')
-        axes[1, 0].set_xlabel('Documents Count')
-        axes[1, 0].set_ylabel('Average Score')
-        axes[1, 0].grid(True, alpha=0.3)
-        
-        # Response time distribution (if available)
-        if 'response_time' in df.columns:
-            axes[1, 1].hist(df['response_time'], bins=15, alpha=0.7, color='teal', edgecolor='black')
-            axes[1, 1].set_title('Response Time Distribution')
-            axes[1, 1].set_xlabel('Response Time (seconds)')
-            axes[1, 1].set_ylabel('Frequency')
-            axes[1, 1].grid(True, alpha=0.3)
-        else:
-            axes[1, 1].text(0.5, 0.5, 'No response time data available', 
-                           ha='center', va='center', transform=axes[1, 1].transAxes)
-            axes[1, 1].set_title('Response Time Analysis')
-        
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        self.logger.info(f"Recall performance plot saved to {save_path}")
         return str(save_path)
+        
+        # fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        # fig.suptitle('Recall Performance Analysis', fontsize=16, fontweight='bold')
+        
+        # Temporarily disabled matplotlib code
+        # axes[0, 0].bar(range(len(df)), df['documents_count'], alpha=0.7, color='steelblue')
+        # ... (all matplotlib code commented out)
+        # self.logger.info(f"Recall performance plot saved to {save_path}")
+        # return str(save_path)
     
     def generate_summary_report(self, df: pd.DataFrame, save_path: Optional[str] = None) -> str:
         """
@@ -176,12 +135,15 @@ class VisualizationGenerator:
         Returns:
             Path to saved plot
         """
+        # Temporarily disabled due to matplotlib dependency issues
+        self.logger.warning("Visualization temporarily disabled due to matplotlib dependency issues")
         if save_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             save_path = self.output_dir / f"summary_report_{timestamp}.png"
+        return str(save_path)
         
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-        fig.suptitle('Test Results Summary Report', fontsize=16, fontweight='bold')
+        # fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        # fig.suptitle('Test Results Summary Report', fontsize=16, fontweight='bold')
         
         # Overall statistics
         total_queries = len(df)
@@ -265,9 +227,9 @@ class VisualizationGenerator:
                            ha='center', va='center', transform=axes[1, 2].transAxes)
             axes[1, 2].set_title('Performance Trend')
         
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        plt.close()
+        # plt.tight_layout()
+        # plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        # plt.close()
         
         self.logger.info(f"Summary report saved to {save_path}")
         return str(save_path)

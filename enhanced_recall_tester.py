@@ -47,8 +47,8 @@ class TestConfig:
     score_threshold_enabled: bool = False
     score_threshold: float = 0.0
     reranking_enabled: bool = True
-    reranking_provider: str = "cohere"
-    reranking_model: str = "rerank-multilingual-v3.0"
+    reranking_provider: str = ""
+    reranking_model: str = ""
     output_prefix: str = "recall_test"
     save_csv: bool = True
     save_detailed_json: bool = True
