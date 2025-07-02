@@ -1,0 +1,21 @@
+{
+  "api_base_url": "http://182.61.146.253/",
+  "api_key": "dataset-jPZRmzKTztsvXxyC1vLvzBtO",
+  "dataset_id": "21a83801-5d3d-4b9c-b991-c71ef75fc1e6",
+  "test_settings": {
+    "top_k": 10,
+    "delay_between_requests": 1.0,
+    "score_threshold_enabled": false,
+    "reranking_enabled": true,
+    "reranking_model": {
+      "provider": "cohere",
+      "model": "rerank-multilingual-v3.0"
+    }
+  },
+  "output_settings": {
+    "save_csv": true,
+    "save_detailed_json": true,
+    "output_prefix": "recall_test",
+    "include_document_content": true
+  }
+}
