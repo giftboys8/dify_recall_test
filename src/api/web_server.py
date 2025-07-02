@@ -104,6 +104,9 @@ class WebInterface:
         self.app = Flask(__name__)
         CORS(self.app)
         
+        # Register blueprints
+        self._register_blueprints()
+        
         # Setup routes
         self._setup_routes()
         
@@ -112,6 +115,15 @@ class WebInterface:
         self.test_cases = []
         
         self.logger.info("Web interface initialized")
+    
+    def _register_blueprints(self):
+        """Register Flask blueprints."""
+        try:
+            from .translation_api import translation_bp
+            self.app.register_blueprint(translation_bp)
+            self.logger.info("Translation API blueprint registered")
+        except ImportError as e:
+            self.logger.warning(f"Could not register translation API blueprint: {e}")
     
     def _setup_routes(self):
         """Setup Flask routes."""

@@ -46,12 +46,22 @@
 
 ## 🚀 功能特性
 
+### 知识库召回测试
 - **批量测试**: 支持从CSV文件批量导入测试用例
 - **详细分析**: 获取每个查询的详细召回结果和分数
 - **多种输出格式**: 支持CSV、JSON格式的结果导出
 - **可视化分析**: 生成分数分布、分类统计等图表
 - **Web界面**: 提供友好的图形化操作界面
 - **配置灵活**: 支持配置文件和命令行参数
+
+### PDF翻译功能
+- **多语言支持**: 支持中英日韩法德西等多种语言互译
+- **多种翻译引擎**: 支持NLLB本地模型和OpenAI API翻译
+- **智能布局**: 提供并排对照和段落对段落两种布局模式
+- **格式保持**: 保持原文档的格式和结构
+- **批量处理**: 支持单个或批量PDF文件翻译
+- **多种输出**: 支持DOCX、PDF或双格式输出
+- **翻译历史**: 记录翻译历史和下载管理
 
 ## 🚀 快速开始
 
@@ -118,6 +128,10 @@ python main.py web --port 8080
 make run-web
 ```
 
+访问 http://localhost:8080 即可使用Web界面，包含：
+- **Recall Testing**: 知识库召回测试功能
+- **PDF Translation**: PDF翻译功能
+
 #### 快速启动
 
 ```bash
@@ -183,10 +197,31 @@ python enhanced_recall_tester.py \
 
 启动Web界面：
 ```bash
-streamlit run web_interface.py
+python main.py web --port 8080
 ```
 
-然后在浏览器中打开显示的URL（通常是 http://localhost:8501）
+然后在浏览器中打开 http://localhost:8080
+
+#### PDF翻译功能使用
+
+1. **配置翻译设置**
+   - 选择翻译提供商（NLLB本地模型或OpenAI）
+   - 设置源语言和目标语言
+   - 选择输出格式（DOCX、PDF或两者）
+   - 选择布局模式（并排对照或段落对段落）
+
+2. **测试翻译**
+   - 在测试文本框中输入文本
+   - 点击"Test Translation"验证翻译效果
+
+3. **翻译PDF文件**
+   - 上传PDF文件（最大50MB）
+   - 点击"Translate PDF"开始翻译
+   - 下载翻译结果
+
+4. **查看翻译历史**
+   - 查看所有翻译记录
+   - 重新下载之前的翻译结果
 
 ## 📋 测试用例格式
 
@@ -303,6 +338,45 @@ id,query,category,description
 - `openai`: OpenAI重排序模型
 - `cohere`: Cohere重排序模型  
 - `jina`: Jina重排序模型（推荐使用 `jina-reranker-v2-base-multilingual`）
+
+
+## 🌐 PDF翻译配置
+
+### 支持的翻译提供商
+
+#### NLLB本地模型（推荐）
+- 无需API密钥
+- 支持200+语言
+- 本地处理，数据安全
+- 模型：`facebook/nllb-200-distilled-600M`
+
+#### OpenAI翻译
+- 需要OpenAI API密钥
+- 高质量翻译效果
+- 支持主流语言
+- 按使用量计费
+
+### 支持的语言
+
+- **中文**: zh-CN (简体中文)
+- **英语**: en (English)
+- **日语**: ja (Japanese)
+- **韩语**: ko (Korean)
+- **法语**: fr (French)
+- **德语**: de (German)
+- **西班牙语**: es (Spanish)
+- **自动检测**: auto (仅作为源语言)
+
+### 输出格式选项
+
+- **DOCX**: Microsoft Word文档格式
+- **PDF**: 便携式文档格式
+- **Both**: 同时生成DOCX和PDF
+
+### 布局模式
+
+- **Side by Side**: 原文和译文并排显示
+- **Paragraph by Paragraph**: 原文段落后紧跟译文段落
 
 ### 设置分数阈值
 
