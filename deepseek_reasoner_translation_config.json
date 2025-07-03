@@ -1,0 +1,25 @@
+{
+  "translation_settings": {
+    "provider": "deepseek-reasoner",
+    "api_key": "YOUR_DEEPSEEK_API_KEY",
+    "model": "deepseek-reasoner",
+    "source_language": "auto",
+    "target_language": "zh-CN",
+    "temperature": 0.1,
+    "batch_size": 5,
+    "delay_between_requests": 2.0,
+    "max_retries": 3
+  },
+  "output_settings": {
+    "format": "docx",
+    "layout": "side_by_side",
+    "replace_original": false
+  },
+  "processing_settings": {
+    "chunk_size": 1000,
+    "overlap_size": 100,
+    "preserve_formatting": true,
+    "extract_tables": true,
+    "extract_images": false
+  }
+}

@@ -356,6 +356,13 @@ id,query,category,description
 - 支持主流语言
 - 按使用量计费
 
+#### DeepSeek翻译
+- 需要DeepSeek API密钥
+- 高性价比翻译服务
+- 支持主流语言
+- 兼容OpenAI API格式
+- 模型：`deepseek-chat`
+
 ### 支持的语言
 
 - **中文**: zh-CN (简体中文)
@@ -384,6 +391,79 @@ id,query,category,description
 "score_threshold_enabled": true,
 "score_threshold": 0.7
 ```
+
+### DeepSeek翻译配置示例
+
+#### DeepSeek Chat 模型（标准翻译）
+
+使用DeepSeek Chat翻译服务的配置文件示例：
+
+```json
+{
+  "translation_settings": {
+    "provider": "deepseek",
+    "api_key": "YOUR_DEEPSEEK_API_KEY",
+    "model": "deepseek-chat",
+    "source_language": "auto",
+    "target_language": "zh-CN",
+    "temperature": 0.1,
+    "batch_size": 10,
+    "delay_between_requests": 1.0
+  },
+  "output_settings": {
+    "format": "docx",
+    "layout": "side_by_side",
+    "replace_original": false
+  }
+}
+```
+
+#### DeepSeek Reasoner 模型（高质量推理翻译）
+
+使用DeepSeek Reasoner翻译服务的配置文件示例：
+
+```json
+{
+  "translation_settings": {
+    "provider": "deepseek-reasoner",
+    "api_key": "YOUR_DEEPSEEK_API_KEY",
+    "model": "deepseek-reasoner",
+    "source_language": "auto",
+    "target_language": "zh-CN",
+    "temperature": 0.1,
+    "batch_size": 5,
+    "delay_between_requests": 2.0
+  },
+  "output_settings": {
+    "format": "docx",
+    "layout": "side_by_side",
+    "replace_original": false
+  }
+}
+```
+
+#### 模型选择建议
+
+**DeepSeek Chat (`deepseek`)**：
+- 适用场景：日常文档、商务邮件、技术文档
+- 优势：响应速度快、成本较低、适合大批量翻译
+- 推荐用于：常规翻译任务
+
+**DeepSeek Reasoner (`deepseek-reasoner`)**：
+- 适用场景：学术论文、法律文档、复杂技术文档
+- 优势：深度推理能力、更高翻译质量、更好的上下文理解
+- 推荐用于：需要高质量翻译的专业文档
+- 注意：响应时间较长、成本较高
+
+### 使用方法
+
+1. 获取DeepSeek API密钥：访问 [DeepSeek官网](https://platform.deepseek.com/) 注册并获取API密钥
+2. 在Web界面中选择翻译提供商：
+   - 选择 "deepseek" 使用标准Chat模型
+   - 选择 "deepseek-reasoner" 使用推理模型
+3. 输入您的API密钥
+4. 选择源语言和目标语言
+5. 上传PDF文件开始翻译
 
 ### 批量测试大量用例
 

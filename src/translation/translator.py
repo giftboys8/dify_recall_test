@@ -171,6 +171,38 @@ class OpenAITranslator(BaseTranslator):
         
         openai.api_key = self.config.api_key
         self.logger.info("OpenAI客户端初始化完成")
+
+
+class DeepSeekTranslator(BaseTranslator):
+    """DeepSeek翻译器（使用OpenAI兼容API）"""
+    
+    def __init__(self, config: TranslationConfig):
+        super().__init__(config)
+        self.client = None
+        self._initialize_client()
+    
+    def _initialize_client(self):
+        """初始化DeepSeek客户端"""
+        if openai is None:
+            raise ImportError("openai库未安装，请运行: pip install openai")
+        
+        if not self.config.api_key:
+            raise ValueError("DeepSeek API密钥未配置")
+        
+        # 创建OpenAI客户端，指向DeepSeek API
+        try:
+            # 尝试使用新版本的openai库
+            self.client = openai.OpenAI(
+                api_key=self.config.api_key,
+                base_url="https://api.deepseek.com"
+            )
+        except AttributeError:
+            # 兼容旧版本的openai库
+            openai.api_key = self.config.api_key
+            openai.api_base = "https://api.deepseek.com/v1"
+            self.client = openai
+        
+        self.logger.info("DeepSeek客户端初始化完成")
     
     def translate_text(self, text: str) -> str:
         """翻译单个文本"""
@@ -178,44 +210,59 @@ class OpenAITranslator(BaseTranslator):
             return text
         
         try:
-            model = self.config.model or "gpt-3.5-turbo"
+            model = self.config.model or "deepseek-chat"
             
-            # 构建翻译提示
             target_lang_name = self._get_language_name(self.config.target_language)
-            prompt = f"请将以下文本翻译成{target_lang_name}，保持原文的语气和格式：\n\n{text}"
+            source_lang_name = self._get_language_name(self.config.source_language)
             
-            response = openai.ChatCompletion.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": "你是一个专业的翻译助手，能够准确翻译各种文档内容。"},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=self.config.temperature,
-                max_tokens=4000
-            )
+            prompt = f"请将以下{source_lang_name}文本翻译成{target_lang_name}，保持原文的格式和含义：\n\n{text}"
             
-            return response.choices[0].message.content.strip()
+            # 兼容不同版本的openai库
+            if hasattr(self.client, 'chat'):
+                # 新版本openai库
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "你是一个专业的翻译助手，能够准确翻译各种语言。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=2000
+                )
+                translated_text = response.choices[0].message.content.strip()
+            else:
+                # 旧版本openai库
+                response = self.client.ChatCompletion.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "你是一个专业的翻译助手，能够准确翻译各种语言。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=2000
+                )
+                translated_text = response.choices[0].message.content.strip()
+            
+            return translated_text
             
         except Exception as e:
-            self.logger.error(f"OpenAI翻译失败: {e}")
+            self.logger.error(f"DeepSeek翻译失败: {e}")
             return text
     
     def translate_batch(self, texts: List[str]) -> List[str]:
         """批量翻译文本"""
-        results = []
+        translated_texts = []
         
         for i, text in enumerate(texts):
-            translated = self.translate_text(text)
-            results.append(translated)
+            self.logger.info(f"翻译进度: {i+1}/{len(texts)}")
+            translated_text = self.translate_text(text)
+            translated_texts.append(translated_text)
             
-            # 添加延迟避免API限流
-            if self.config.delay_between_requests > 0:
+            # 添加延迟以避免API限制
+            if i < len(texts) - 1:
                 time.sleep(self.config.delay_between_requests)
-            
-            if (i + 1) % 10 == 0:
-                self.logger.info(f"已完成翻译: {i + 1}/{len(texts)}")
         
-        return results
+        return translated_texts
     
     def _get_language_name(self, lang_code: str) -> str:
         """获取语言名称"""
@@ -228,13 +275,144 @@ class OpenAITranslator(BaseTranslator):
             'ko': '韩文',
             'fr': '法文',
             'de': '德文',
-            'es': '西班牙文'
+            'es': '西班牙文',
+            'auto': '自动检测'
         }
         return lang_names.get(lang_code, '英文')
     
     def is_available(self) -> bool:
-        """检查OpenAI翻译器是否可用"""
-        return bool(self.config.api_key)
+        """检查DeepSeek翻译器是否可用"""
+        return bool(self.config.api_key and self.client)
+
+
+class DeepSeekReasonerTranslator(BaseTranslator):
+    """DeepSeek Reasoner翻译器 - 专门用于复杂推理翻译任务"""
+    
+    def __init__(self, config: TranslationConfig):
+        super().__init__(config)
+        self.client = None
+        self._initialize_client()
+    
+    def _initialize_client(self):
+        """初始化DeepSeek Reasoner客户端"""
+        if openai is None:
+            raise ImportError("openai库未安装，请运行: pip install openai")
+        
+        if not self.config.api_key:
+            raise ValueError("DeepSeek API密钥未配置")
+        
+        # 创建OpenAI客户端，指向DeepSeek API
+        try:
+            # 尝试使用新版本的openai库
+            self.client = openai.OpenAI(
+                api_key=self.config.api_key,
+                base_url="https://api.deepseek.com"
+            )
+        except AttributeError:
+            # 兼容旧版本的openai库
+            openai.api_key = self.config.api_key
+            openai.api_base = "https://api.deepseek.com/v1"
+            self.client = openai
+        
+        self.logger.info("DeepSeek Reasoner客户端初始化完成")
+    
+    def translate_text(self, text: str) -> str:
+        """翻译单个文本 - 使用深度推理方法"""
+        if not text.strip():
+            return text
+        
+        try:
+            model = self.config.model or "deepseek-reasoner"
+            
+            # 构建更详细的翻译提示，利用推理能力
+            target_lang_name = self._get_language_name(self.config.target_language)
+            source_lang_name = self._get_language_name(self.config.source_language)
+            
+            prompt = f"""作为一个专业的翻译专家，请仔细分析以下文本并进行高质量翻译：
+
+原文语言：{source_lang_name}
+目标语言：{target_lang_name}
+
+请按照以下步骤进行翻译：
+1. 首先理解原文的核心含义、语境和语调
+2. 识别专业术语、习语或文化特定表达
+3. 考虑目标语言的表达习惯和文化背景
+4. 确保翻译的准确性、流畅性和自然性
+5. 保持原文的格式和结构
+
+原文：
+{text}
+
+请提供最终的翻译结果："""
+            
+            # 兼容不同版本的openai库
+            if hasattr(self.client, 'chat'):
+                # 新版本openai库
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "你是一个具有深度推理能力的专业翻译专家，能够理解复杂语境并提供高质量的翻译。你会仔细分析文本的含义、语境和文化背景，然后提供准确、流畅、自然的翻译。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=self.config.temperature,
+                    max_tokens=6000  # 增加token限制以支持推理过程
+                )
+                return response.choices[0].message.content.strip()
+            else:
+                # 旧版本openai库
+                response = self.client.ChatCompletion.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "你是一个具有深度推理能力的专业翻译专家，能够理解复杂语境并提供高质量的翻译。你会仔细分析文本的含义、语境和文化背景，然后提供准确、流畅、自然的翻译。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=self.config.temperature,
+                    max_tokens=6000
+                )
+                return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            self.logger.error(f"DeepSeek Reasoner翻译失败: {e}")
+            return text  # 翻译失败时返回原文
+    
+    def translate_batch(self, texts: List[str]) -> List[str]:
+        """批量翻译文本 - 使用推理模型，增加延迟以确保质量"""
+        results = []
+        
+        for i, text in enumerate(texts):
+            translated = self.translate_text(text)
+            results.append(translated)
+            
+            # 推理模型需要更多时间，增加延迟
+            delay = max(self.config.delay_between_requests, 2.0)  # 最少2秒延迟
+            time.sleep(delay)
+            
+            if (i + 1) % 5 == 0:  # 更频繁的进度报告
+                self.logger.info(f"已完成推理翻译: {i + 1}/{len(texts)}")
+        
+        return results
+    
+    def _get_language_name(self, lang_code: str) -> str:
+        """获取语言名称"""
+        lang_names = {
+            'zh-CN': '中文',
+            'zh': '中文', 
+            'en': '英文',
+            'en-US': '英文',
+            'ja': '日文',
+            'ko': '韩文',
+            'fr': '法文',
+            'de': '德文',
+            'es': '西班牙文',
+            'auto': '自动检测'
+        }
+        return lang_names.get(lang_code, '英文')
+    
+    def is_available(self) -> bool:
+        """检查DeepSeek Reasoner翻译器是否可用"""
+        return bool(self.config.api_key and self.client)
+
+
 
 
 class TranslationEngine:
@@ -242,8 +420,14 @@ class TranslationEngine:
     
     def __init__(self, config: TranslationConfig):
         self.config = config
-        self.translator = self._create_translator()
+        self.translator = None
         self.logger = get_logger(__name__)
+    
+    def _get_translator(self) -> BaseTranslator:
+        """获取翻译器实例（延迟初始化）"""
+        if self.translator is None:
+            self.translator = self._create_translator()
+        return self.translator
     
     def _create_translator(self) -> BaseTranslator:
         """创建翻译器实例"""
@@ -251,6 +435,10 @@ class TranslationEngine:
             return NLLBTranslator(self.config)
         elif self.config.provider == 'openai':
             return OpenAITranslator(self.config)
+        elif self.config.provider == 'deepseek':
+            return DeepSeekTranslator(self.config)
+        elif self.config.provider == 'deepseek-reasoner':
+            return DeepSeekReasonerTranslator(self.config)
         else:
             raise ValueError(f"不支持的翻译提供商: {self.config.provider}")
     
@@ -264,14 +452,15 @@ class TranslationEngine:
             翻译结果字典
         """
         try:
-            if not self.translator.is_available():
+            translator = self._get_translator()
+            if not translator.is_available():
                 raise RuntimeError(f"翻译器 {self.config.provider} 不可用")
             
             self.logger.info(f"开始翻译 {len(texts)} 个文本片段")
             start_time = time.time()
             
             # 执行批量翻译
-            translated_texts = self.translator.translate_batch(texts)
+            translated_texts = translator.translate_batch(texts)
             
             end_time = time.time()
             duration = end_time - start_time
@@ -304,11 +493,12 @@ class TranslationEngine:
         Returns:
             翻译后的文本
         """
-        if not self.translator.is_available():
+        translator = self._get_translator()
+        if not translator.is_available():
             self.logger.error(f"翻译器 {self.config.provider} 不可用")
             return text
         
-        return self.translator.translate_text(text)
+        return translator.translate_text(text)
     
     @staticmethod
     def get_supported_providers() -> List[str]:
@@ -316,7 +506,7 @@ class TranslationEngine:
         providers = ['nllb']
         
         if openai is not None:
-            providers.append('openai')
+            providers.extend(['openai', 'deepseek', 'deepseek-reasoner'])
         
         return providers
     

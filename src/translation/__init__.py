@@ -6,7 +6,7 @@
 from .pdf_parser import PDFParser
 from .translator import TranslationEngine
 from .formatter import DocumentFormatter
-from .batch_processor import BatchProcessor
+from .processor import BatchProcessor
 
 __all__ = [
     'PDFParser',

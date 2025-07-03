@@ -120,8 +120,10 @@ def translate_pdf():
             'delay_between_requests': float(form_data.get('delay', 1.0))
         }
         
-        # 创建临时目录
-        with tempfile.TemporaryDirectory() as temp_dir:
+        # 创建临时目录用于处理
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
             # 保存上传的文件
             filename = secure_filename(file.filename)
             input_path = os.path.join(temp_dir, filename)
@@ -156,13 +158,26 @@ def translate_pdf():
                     }
                 }
                 
-                # 读取输出文件并编码为base64（用于下载）
+                # 创建持久化下载目录
+                download_dir = os.path.join(tempfile.gettempdir(), 'translation_downloads')
+                os.makedirs(download_dir, exist_ok=True)
+                
+                # 处理输出文件
                 for output_file in result.output_files:
                     if os.path.exists(output_file):
+                        # 复制文件到持久化目录
+                        import shutil
+                        output_filename = os.path.basename(output_file)
+                        persistent_path = os.path.join(download_dir, output_filename)
+                        shutil.copy2(output_file, persistent_path)
+                        
+                        # 存储文件路径到全局字典
+                        file_storage[output_filename] = persistent_path
+                        
                         file_info = {
-                            'filename': os.path.basename(output_file),
-                            'size': os.path.getsize(output_file),
-                            'download_url': f"/api/translation/download/{os.path.basename(output_file)}"
+                            'filename': output_filename,
+                            'size': os.path.getsize(persistent_path),
+                            'download_url': f"/api/translation/download/{output_filename}"
                         }
                         response_data['data']['output_files'].append(file_info)
                 
@@ -176,6 +191,14 @@ def translate_pdf():
                     'error': result.error,
                     'processing_time': result.processing_time
                 }), 500
+        
+        finally:
+            # 清理临时处理目录
+            import shutil
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.warning(f"清理临时目录失败: {e}")
     
     except Exception as e:
         logger.error(f"翻译API异常: {e}")
@@ -282,15 +305,35 @@ def translate_multiple_pdfs():
                 }
                 
                 if result.success:
+                    # 创建持久化下载目录
+                    download_dir = os.path.join(tempfile.gettempdir(), 'translation_downloads')
+                    os.makedirs(download_dir, exist_ok=True)
+                    
+                    output_files_info = []
+                    # 处理输出文件
+                    for output_file in result.output_files:
+                        if os.path.exists(output_file):
+                            # 复制文件到持久化目录
+                            import shutil
+                            output_filename = os.path.basename(output_file)
+                            persistent_path = os.path.join(download_dir, output_filename)
+                            shutil.copy2(output_file, persistent_path)
+                            
+                            # 存储文件路径到全局字典
+                            file_storage[output_filename] = persistent_path
+                            
+                            file_info = {
+                                'filename': output_filename,
+                                'size': os.path.getsize(persistent_path),
+                                'download_url': f"/api/translation/download/{output_filename}"
+                            }
+                            output_files_info.append(file_info)
+                    
                     file_result.update({
                         'original_text_count': result.original_text_count,
                         'translated_text_count': result.translated_text_count,
                         'provider': result.provider,
-                        'output_files': [{
-                            'filename': os.path.basename(f),
-                            'size': os.path.getsize(f) if os.path.exists(f) else 0,
-                            'download_url': f"/api/translation/download/{os.path.basename(f)}"
-                        } for f in result.output_files]
+                        'output_files': output_files_info
                     })
                 else:
                     file_result['error'] = result.error
@@ -308,35 +351,94 @@ def translate_multiple_pdfs():
         }), 500
 
 
+# 全局文件存储字典，用于跟踪生成的文件
+# 在生产环境中，应该使用Redis或数据库来存储这些信息
+file_storage = {}
+
+def cleanup_old_files():
+    """清理超过1小时的下载文件"""
+    try:
+        download_dir = os.path.join(tempfile.gettempdir(), 'translation_downloads')
+        if not os.path.exists(download_dir):
+            return
+        
+        import time
+        current_time = time.time()
+        files_to_remove = []
+        
+        for filename, file_path in file_storage.items():
+            try:
+                if os.path.exists(file_path):
+                    # 检查文件创建时间，超过1小时的文件将被删除
+                    file_age = current_time - os.path.getctime(file_path)
+                    if file_age > 3600:  # 1小时 = 3600秒
+                        os.remove(file_path)
+                        files_to_remove.append(filename)
+                        logger.info(f"清理过期文件: {filename}")
+                else:
+                    files_to_remove.append(filename)
+            except Exception as e:
+                logger.warning(f"清理文件 {filename} 时出错: {e}")
+                files_to_remove.append(filename)
+        
+        # 从字典中移除已清理的文件
+        for filename in files_to_remove:
+            file_storage.pop(filename, None)
+            
+    except Exception as e:
+        logger.error(f"文件清理过程出错: {e}")
+
 @translation_bp.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
-    """下载翻译结果文件"""
+    """下载翻译后的文件"""
     try:
-        # 安全检查文件名
-        safe_filename = secure_filename(filename)
+        # 定期清理过期文件
+        cleanup_old_files()
         
-        # 这里需要实现文件存储和检索机制
-        # 在实际应用中，应该将文件存储在安全的位置，并通过会话或令牌验证访问权限
-        
-        # 临时实现：从临时目录查找文件
-        # 注意：这只是示例，生产环境需要更安全的文件管理
-        temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, safe_filename)
-        
-        if not os.path.exists(file_path):
+        # 安全文件名检查
+        secure_name = secure_filename(filename)
+        if not secure_name:
             return jsonify({
                 'success': False,
-                'error': '文件不存在或已过期'
-            }), 404
+                'error': '无效的文件名'
+            }), 400
         
-        return send_file(
-            file_path,
-            as_attachment=True,
-            download_name=safe_filename
-        )
-    
+        # 首先检查文件存储字典
+        if secure_name in file_storage:
+            file_path = file_storage[secure_name]
+            if os.path.exists(file_path):
+                return send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=secure_name,
+                    mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                )
+        
+        # 如果字典中没有，搜索临时目录
+        import glob
+        temp_pattern = os.path.join(tempfile.gettempdir(), '**', secure_name)
+        matching_files = glob.glob(temp_pattern, recursive=True)
+        
+        if matching_files:
+            # 使用最新的文件
+            file_path = max(matching_files, key=os.path.getctime)
+            if os.path.exists(file_path):
+                # 更新文件存储字典
+                file_storage[secure_name] = file_path
+                return send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=secure_name,
+                    mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                )
+        
+        return jsonify({
+            'success': False,
+            'error': '文件不存在或已过期'
+        }), 404
+        
     except Exception as e:
-        logger.error(f"文件下载异常: {e}")
+        logger.error(f"文件下载失败: {e}")
         return jsonify({
             'success': False,
             'error': f"下载失败: {str(e)}"
@@ -423,6 +525,9 @@ def test_translation():
             'success': False,
             'error': str(e)
         }), 500
+
+
+
 
 
 # 错误处理

@@ -514,7 +514,19 @@ class DifyTestApp {
     updateTranslationProviderUI(provider) {
         const apiKeyGroup = document.getElementById('apiKeyGroup');
         if (apiKeyGroup) {
-            apiKeyGroup.style.display = provider === 'openai' ? 'block' : 'none';
+            // 显示API密钥输入框的提供商：openai, deepseek, deepseek-reasoner
+            const needsApiKey = ['openai', 'deepseek', 'deepseek-reasoner'].includes(provider);
+            apiKeyGroup.style.display = needsApiKey ? 'block' : 'none';
+            
+            // 更新API密钥标签
+            const apiKeyLabel = apiKeyGroup.querySelector('label');
+            if (apiKeyLabel) {
+                if (provider === 'openai') {
+                    apiKeyLabel.textContent = 'OpenAI API Key';
+                } else if (provider === 'deepseek' || provider === 'deepseek-reasoner') {
+                    apiKeyLabel.textContent = 'DeepSeek API Key';
+                }
+            }
         }
     }
     
@@ -581,7 +593,17 @@ class DifyTestApp {
         
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('config', JSON.stringify(config));
+        
+        // 将配置参数作为单独的表单字段添加
+        formData.append('provider', config.provider);
+        formData.append('source_language', config.source_language);
+        formData.append('target_language', config.target_language);
+        formData.append('output_format', config.output_format);
+        formData.append('layout', config.layout);
+        
+        if (config.api_key) {
+            formData.append('api_key', config.api_key);
+        }
         
         const translateBtn = document.getElementById('translatePdfBtn');
         const loadingDiv = document.querySelector('.loading-translation');
@@ -634,10 +656,11 @@ class DifyTestApp {
             layout: layoutOption
         };
         
-        if (provider === 'openai') {
+        if (['openai', 'deepseek', 'deepseek-reasoner'].includes(provider)) {
             const apiKey = document.getElementById('translationApiKey').value.trim();
             if (!apiKey) {
-                this.showAlert('Please enter OpenAI API key.', 'warning');
+                const providerName = provider === 'openai' ? 'OpenAI' : 'DeepSeek';
+                this.showAlert(`Please enter ${providerName} API key.`, 'warning');
                 return null;
             }
             config.api_key = apiKey;
@@ -651,30 +674,36 @@ class DifyTestApp {
         const infoDiv = document.getElementById('translationInfo');
         const linksDiv = document.getElementById('downloadLinks');
         
+        // Handle the new API response format
+        const data = result.data || result;
+        
         infoDiv.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
-                    <strong>Processing Time:</strong> ${result.processing_time}s<br>
-                    <strong>Pages:</strong> ${result.pages_count}<br>
-                    <strong>Paragraphs:</strong> ${result.paragraphs_count}
+                    <strong>Processing Time:</strong> ${data.processing_time}s<br>
+                    <strong>Original Text Count:</strong> ${data.original_text_count || 'N/A'}<br>
+                    <strong>Translated Text Count:</strong> ${data.translated_text_count || 'N/A'}
                 </div>
                 <div class="col-md-6">
-                    <strong>Provider:</strong> ${result.provider}<br>
-                    <strong>Languages:</strong> ${result.source_language} → ${result.target_language}<br>
-                    <strong>Layout:</strong> ${result.layout}
+                    <strong>Provider:</strong> ${data.provider}<br>
+                    <strong>Input File:</strong> ${data.input_file}<br>
+                    <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}
                 </div>
             </div>
         `;
         
         let downloadHtml = '';
-        if (result.download_urls) {
-            Object.entries(result.download_urls).forEach(([format, url]) => {
+        if (data.output_files && data.output_files.length > 0) {
+            data.output_files.forEach(file => {
                 downloadHtml += `
-                    <a href="${url}" class="btn btn-outline-primary me-2 mb-2" download>
-                        <i class="fas fa-download"></i> Download ${format.toUpperCase()}
+                    <a href="${file.download_url}" class="btn btn-outline-primary me-2 mb-2" download>
+                        <i class="fas fa-download"></i> Download ${file.filename}
                     </a>
+                    <small class="text-muted d-block mb-2">Size: ${(file.size / 1024).toFixed(1)} KB</small>
                 `;
             });
+        } else {
+            downloadHtml = '<p class="text-muted">No output files available for download.</p>';
         }
         
         linksDiv.innerHTML = downloadHtml;
@@ -691,6 +720,7 @@ class DifyTestApp {
         }
         
         const row = historyTable.insertRow(0);
+        const data = result.data || result;
         const timestamp = new Date().toLocaleString();
         const languages = `${config.source_language} → ${config.target_language}`;
         const status = result.success ? 'Success' : 'Failed';
@@ -701,12 +731,12 @@ class DifyTestApp {
             <td>${config.provider}</td>
             <td>${languages}</td>
             <td><span class="${statusClass}">${status}</span></td>
-            <td>${result.processing_time}s</td>
+            <td>${data.processing_time}s</td>
             <td>${timestamp}</td>
             <td>
-                ${result.download_urls ? Object.entries(result.download_urls).map(([format, url]) => 
-                    `<a href="${url}" class="btn btn-sm btn-outline-primary me-1" download>
-                        ${format.toUpperCase()}
+                ${data.output_files ? data.output_files.map(file => 
+                    `<a href="${file.download_url}" class="btn btn-sm btn-outline-primary me-1" download>
+                        <i class="fas fa-download"></i> ${file.filename}
                     </a>`
                 ).join('') : ''}
             </td>

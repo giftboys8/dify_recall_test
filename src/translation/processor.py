@@ -122,8 +122,13 @@ class BatchProcessor:
             if not parse_result['success']:
                 raise RuntimeError(f"PDF解析失败: {parse_result.get('error')}")
             
-            temp_files.extend(parse_result.get('temp_files', []))
-            extracted_texts = parse_result['texts']
+            # 添加临时文件到清理列表
+            if 'temp_docx_path' in parse_result:
+                temp_files.append(parse_result['temp_docx_path'])
+            
+            # 从文档数据中提取文本
+            document_data = parse_result['document_data']
+            extracted_texts = self.pdf_parser.get_text_for_translation(document_data)
             
             if not extracted_texts:
                 raise RuntimeError("PDF中未提取到任何文本")
