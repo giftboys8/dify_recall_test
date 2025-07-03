@@ -124,6 +124,13 @@ class WebInterface:
             self.logger.info("Translation API blueprint registered")
         except ImportError as e:
             self.logger.warning(f"Could not register translation API blueprint: {e}")
+        
+        try:
+            from .ideas_api import ideas_bp
+            self.app.register_blueprint(ideas_bp)
+            self.logger.info("Ideas API blueprint registered")
+        except ImportError as e:
+            self.logger.warning(f"Could not register ideas API blueprint: {e}")
     
     def _setup_routes(self):
         """Setup Flask routes."""
@@ -132,6 +139,11 @@ class WebInterface:
         def index():
             """Main page."""
             return render_template('index.html')
+        
+        @self.app.route('/ideas')
+        def ideas():
+            """Ideas page."""
+            return render_template('ideas.html')
         
         @self.app.route('/api/config', methods=['GET', 'POST'])
         def config_api():
