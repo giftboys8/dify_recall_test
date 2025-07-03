@@ -62,6 +62,8 @@
 - **批量处理**: 支持单个或批量PDF文件翻译
 - **多种输出**: 支持DOCX、PDF或双格式输出
 - **翻译历史**: 记录翻译历史和下载管理
+- **离线支持**: NLLB模型支持离线使用，无需网络连接
+- **内存优化**: 智能内存管理，支持低配置设备运行
 
 ## 🚀 快速开始
 
@@ -131,6 +133,20 @@ make run-web
 访问 http://localhost:8080 即可使用Web界面，包含：
 - **Recall Testing**: 知识库召回测试功能
 - **PDF Translation**: PDF翻译功能
+
+#### NLLB模型预下载（可选）
+
+如果您计划在离线环境下使用NLLB翻译功能，建议预先下载模型：
+
+```bash
+# 下载默认NLLB模型到本地缓存
+python download_nllb_model.py
+
+# 或下载指定模型
+python download_nllb_model.py facebook/nllb-200-distilled-1.3B
+```
+
+下载完成后，系统会自动优先使用本地缓存的模型，无需网络连接。
 
 #### 快速启动
 

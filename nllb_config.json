@@ -1,0 +1,41 @@
+{
+  "nllb_translator": {
+    "model_name": "facebook/nllb-200-distilled-600M",
+    "device": "cpu",
+    "memory_optimization": {
+      "use_half_precision": true,
+      "low_cpu_mem_usage": true,
+      "use_cache": false
+    },
+    "offline_mode": {
+      "prefer_local_files": true,
+      "fallback_to_online": true
+    },
+    "batch_processing": {
+      "max_batch_size": 8,
+      "min_batch_size": 1,
+      "dynamic_batching": true
+    },
+    "language_mapping": {
+      "chinese_simplified": "zho_Hans",
+      "chinese_traditional": "zho_Hant",
+      "english": "eng_Latn",
+      "japanese": "jpn_Jpan",
+      "korean": "kor_Hang",
+      "french": "fra_Latn",
+      "german": "deu_Latn",
+      "spanish": "spa_Latn",
+      "russian": "rus_Cyrl",
+      "arabic": "arb_Arab"
+    },
+    "fallback_models": [
+      "facebook/nllb-200-distilled-1.3B",
+      "facebook/nllb-200-1.3B"
+    ],
+    "error_handling": {
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "graceful_degradation": true
+    }
+  }
+}

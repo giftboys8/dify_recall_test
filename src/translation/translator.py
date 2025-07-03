@@ -4,7 +4,11 @@
 """
 
 import asyncio
+import gc
+import json
+import os
 import time
+import torch
 from typing import List, Dict, Any, Optional, Union
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -66,32 +70,169 @@ class NLLBTranslator(BaseTranslator):
     def __init__(self, config: TranslationConfig):
         super().__init__(config)
         self.translator = None
-        self._initialize_model()
+        self.model_loaded = False
+        self.nllb_config = self._load_nllb_config()
+        # 延迟加载模型，避免初始化时内存压力
+    
+    def _load_nllb_config(self) -> Dict[str, Any]:
+        """加载NLLB配置文件"""
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'nllb_config.json')
+        
+        try:
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+                    return config_data.get('nllb_translator', {})
+            else:
+                self.logger.warning(f"NLLB配置文件不存在: {config_path}，使用默认配置")
+        except Exception as e:
+            self.logger.warning(f"加载NLLB配置文件失败: {e}，使用默认配置")
+        
+        # 返回默认配置
+        return {
+            "model_name": "facebook/nllb-200-distilled-600M",
+            "device": "cpu",
+            "memory_optimization": {
+                "use_half_precision": True,
+                "low_cpu_mem_usage": True,
+                "use_cache": False
+            },
+            "offline_mode": {
+                "prefer_local_files": True,
+                "fallback_to_online": True
+            }
+        }
     
     def _initialize_model(self):
-        """初始化NLLB模型"""
+        """初始化NLLB模型（延迟加载）"""
+        if self.model_loaded:
+            return
+            
         if pipeline is None:
             raise ImportError("transformers库未安装，请运行: pip install transformers torch")
         
         try:
-            model_name = self.config.model or 'facebook/nllb-200-distilled-600M'
+            import gc
+            import torch
+            
+            # 清理内存
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            # 从配置文件获取模型设置
+            model_name = self.config.model or self.nllb_config.get('model_name', 'facebook/nllb-200-distilled-600M')
+            memory_config = self.nllb_config.get('memory_optimization', {})
+            offline_config = self.nllb_config.get('offline_mode', {})
+            
             self.logger.info(f"正在加载NLLB模型: {model_name}")
+            self.logger.info(f"内存优化设置: {memory_config}")
+            self.logger.info(f"离线模式设置: {offline_config}")
             
-            self.translator = pipeline(
-                'translation',
-                model=model_name,
-                device=-1  # 使用CPU，如需GPU可设为0
-            )
+            # 使用配置文件设置，支持离线模式
+            device = -1 if self.nllb_config.get('device', 'cpu') == 'cpu' else 0
             
+            # 构建模型参数
+            model_kwargs = {}
+            if memory_config.get('low_cpu_mem_usage', True):
+                model_kwargs['low_cpu_mem_usage'] = True
+            if memory_config.get('use_half_precision', True):
+                model_kwargs['torch_dtype'] = torch.float16
+            if not memory_config.get('use_cache', False):
+                model_kwargs['use_cache'] = False
+            
+            # 尝试加载模型
+            if offline_config.get('prefer_local_files', True):
+                try:
+                    # 首先尝试使用本地缓存的模型
+                    self.translator = pipeline(
+                        'translation',
+                        model=model_name,
+                        device=device,
+                        local_files_only=True,  # 只使用本地文件
+                        model_kwargs=model_kwargs
+                    )
+                    self.logger.info(f"成功从本地缓存加载NLLB模型: {model_name}")
+                except Exception as e:
+                    self.logger.warning(f"本地缓存加载失败: {e}")
+                    if offline_config.get('fallback_to_online', True):
+                        self._try_online_loading(model_name, device, model_kwargs, memory_config)
+                    else:
+                        raise e
+            else:
+                # 直接尝试在线加载
+                self._try_online_loading(model_name, device, model_kwargs, memory_config)
+            
+            self.model_loaded = True
             self.logger.info("NLLB模型加载完成")
             
         except Exception as e:
             self.logger.error(f"NLLB模型加载失败: {e}")
-            raise
+            # 不抛出异常，而是标记为不可用
+            self.translator = None
+            self.model_loaded = False
+    
+    def _try_online_loading(self, model_name: str, device: int, model_kwargs: Dict, memory_config: Dict):
+        """尝试在线加载模型"""
+        try:
+            # 回退到在线下载
+            self.translator = pipeline(
+                'translation',
+                model=model_name,
+                device=device,
+                model_kwargs=model_kwargs
+            )
+            self.logger.info(f"成功在线下载NLLB模型: {model_name}")
+        except Exception as e2:
+            self.logger.warning(f"在线下载也失败，尝试标准加载: {e2}")
+            # 最后回退到标准加载
+            try:
+                self.translator = pipeline(
+                    'translation',
+                    model=model_name,
+                    device=device
+                )
+                self.logger.info(f"使用标准方式加载NLLB模型: {model_name}")
+            except Exception as e3:
+                self.logger.error(f"所有加载方式都失败: {e3}")
+                # 尝试回退模型
+                fallback_models = self.nllb_config.get('fallback_models', [])
+                if fallback_models:
+                    self._try_fallback_models(fallback_models, device)
+                else:
+                    raise e3
+    
+    def _try_fallback_models(self, fallback_models: List[str], device: int):
+        """尝试回退模型"""
+        for fallback_model in fallback_models:
+            try:
+                self.logger.info(f"尝试回退模型: {fallback_model}")
+                self.translator = pipeline(
+                    'translation',
+                    model=fallback_model,
+                    device=device
+                )
+                self.logger.info(f"成功加载回退模型: {fallback_model}")
+                return
+            except Exception as e:
+                self.logger.warning(f"回退模型 {fallback_model} 加载失败: {e}")
+                continue
+        
+        # 所有模型都失败
+        raise Exception("所有模型（包括回退模型）都加载失败")
     
     def translate_text(self, text: str) -> str:
         """翻译单个文本"""
         if not text.strip():
+            return text
+        
+        # 确保模型已加载
+        if not self.model_loaded:
+            self._initialize_model()
+        
+        # 如果模型仍未加载成功，返回原文
+        if not self.translator:
+            self.logger.warning("NLLB模型未加载，返回原文")
             return text
         
         try:
@@ -194,6 +335,12 @@ class NLLBTranslator(BaseTranslator):
     
     def is_available(self) -> bool:
         """检查NLLB翻译器是否可用"""
+        if not self.model_loaded:
+            try:
+                self._initialize_model()
+            except Exception as e:
+                self.logger.error(f"模型初始化检查失败: {e}")
+                return False
         return self.translator is not None
 
 
