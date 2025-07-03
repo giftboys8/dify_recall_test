@@ -115,8 +115,12 @@ class NLLBTranslator(BaseTranslator):
         """批量翻译文本"""
         results = []
         
-        for i in range(0, len(texts), self.config.batch_size):
-            batch = texts[i:i + self.config.batch_size]
+        # 动态计算批处理大小
+        dynamic_batch_size = self._calculate_dynamic_batch_size(texts)
+        self.logger.info(f"使用动态批处理大小: {dynamic_batch_size}")
+        
+        for i in range(0, len(texts), dynamic_batch_size):
+            batch = texts[i:i + dynamic_batch_size]
             batch_results = []
             
             for text in batch:
@@ -131,6 +135,45 @@ class NLLBTranslator(BaseTranslator):
             self.logger.info(f"已完成批次翻译: {i + len(batch)}/{len(texts)}")
         
         return results
+    
+    def _calculate_dynamic_batch_size(self, texts: List[str], max_tokens_per_batch: int = 15000) -> int:
+        """动态计算批处理大小
+        
+        Args:
+            texts: 文本列表
+            max_tokens_per_batch: 每批次最大token数
+            
+        Returns:
+            动态批处理大小
+        """
+        if not texts:
+            return self.config.batch_size
+        
+        # 计算平均文本长度
+        total_chars = sum(len(text) for text in texts)
+        avg_chars = total_chars / len(texts)
+        
+        # 估算token数（中文约1.3倍字符数，英文约0.25倍字符数）
+        # 使用保守估计1.5倍字符数
+        estimated_tokens_per_text = avg_chars * 1.5
+        
+        if estimated_tokens_per_text <= 0:
+            return self.config.batch_size
+        
+        # 计算动态批处理大小
+        dynamic_size = max(1, min(self.config.batch_size, int(max_tokens_per_batch / estimated_tokens_per_text)))
+        
+        # 根据翻译提供商调整
+        if self.config.provider in ['deepseek', 'openai']:
+            # API服务可以处理更大批次
+            dynamic_size = min(dynamic_size, 20)
+        elif self.config.provider == 'nllb':
+            # 本地模型限制更严格
+            dynamic_size = min(dynamic_size, 5)
+        
+        self.logger.debug(f"文本统计: 总数={len(texts)}, 平均长度={avg_chars:.1f}字符, 估算token={estimated_tokens_per_text:.1f}")
+        
+        return dynamic_size
     
     def _get_nllb_lang_code(self, lang: str) -> str:
         """获取NLLB语言代码"""
@@ -253,16 +296,63 @@ class DeepSeekTranslator(BaseTranslator):
         """批量翻译文本"""
         translated_texts = []
         
-        for i, text in enumerate(texts):
-            self.logger.info(f"翻译进度: {i+1}/{len(texts)}")
-            translated_text = self.translate_text(text)
-            translated_texts.append(translated_text)
+        # 动态计算批处理大小
+        dynamic_batch_size = self._calculate_dynamic_batch_size(texts)
+        self.logger.info(f"使用动态批处理大小: {dynamic_batch_size}")
+        
+        for i in range(0, len(texts), dynamic_batch_size):
+            batch = texts[i:i + dynamic_batch_size]
+            batch_results = []
             
-            # 添加延迟以避免API限制
-            if i < len(texts) - 1:
-                time.sleep(self.config.delay_between_requests)
+            for j, text in enumerate(batch):
+                self.logger.info(f"翻译进度: {i+j+1}/{len(texts)}")
+                translated_text = self.translate_text(text)
+                batch_results.append(translated_text)
+                
+                # 添加延迟以避免API限制
+                if j < len(batch) - 1:
+                    time.sleep(self.config.delay_between_requests)
+            
+            translated_texts.extend(batch_results)
+            
+            # 批次间额外延迟
+            if i + dynamic_batch_size < len(texts):
+                time.sleep(self.config.delay_between_requests * 0.5)
         
         return translated_texts
+    
+    def _calculate_dynamic_batch_size(self, texts: List[str], max_tokens_per_batch: int = 12000) -> int:
+        """动态计算批处理大小（DeepSeek优化版本）
+        
+        Args:
+            texts: 文本列表
+            max_tokens_per_batch: 每批次最大token数
+            
+        Returns:
+            动态批处理大小
+        """
+        if not texts:
+            return self.config.batch_size
+        
+        # 计算平均文本长度
+        total_chars = sum(len(text) for text in texts)
+        avg_chars = total_chars / len(texts)
+        
+        # DeepSeek API的token估算（更保守）
+        estimated_tokens_per_text = avg_chars * 1.8  # 包含prompt开销
+        
+        if estimated_tokens_per_text <= 0:
+            return self.config.batch_size
+        
+        # 计算动态批处理大小
+        dynamic_size = max(1, min(self.config.batch_size, int(max_tokens_per_batch / estimated_tokens_per_text)))
+        
+        # DeepSeek API限制调整
+        dynamic_size = min(dynamic_size, 15)  # DeepSeek API建议的最大并发
+        
+        self.logger.debug(f"DeepSeek文本统计: 总数={len(texts)}, 平均长度={avg_chars:.1f}字符, 估算token={estimated_tokens_per_text:.1f}")
+        
+        return dynamic_size
     
     def _get_language_name(self, lang_code: str) -> str:
         """获取语言名称"""
@@ -379,18 +469,65 @@ class DeepSeekReasonerTranslator(BaseTranslator):
         """批量翻译文本 - 使用推理模型，增加延迟以确保质量"""
         results = []
         
-        for i, text in enumerate(texts):
-            translated = self.translate_text(text)
-            results.append(translated)
+        # 动态计算批处理大小（推理模型更保守）
+        dynamic_batch_size = self._calculate_dynamic_batch_size(texts)
+        self.logger.info(f"推理翻译使用动态批处理大小: {dynamic_batch_size}")
+        
+        for i in range(0, len(texts), dynamic_batch_size):
+            batch = texts[i:i + dynamic_batch_size]
+            batch_results = []
             
-            # 推理模型需要更多时间，增加延迟
-            delay = max(self.config.delay_between_requests, 2.0)  # 最少2秒延迟
-            time.sleep(delay)
+            for j, text in enumerate(batch):
+                translated = self.translate_text(text)
+                batch_results.append(translated)
+                
+                # 推理模型需要更多时间，增加延迟
+                delay = max(self.config.delay_between_requests, 2.0)  # 最少2秒延迟
+                time.sleep(delay)
+                
+                if (i + j + 1) % 3 == 0:  # 更频繁的进度报告
+                    self.logger.info(f"已完成推理翻译: {i + j + 1}/{len(texts)}")
             
-            if (i + 1) % 5 == 0:  # 更频繁的进度报告
-                self.logger.info(f"已完成推理翻译: {i + 1}/{len(texts)}")
+            results.extend(batch_results)
+            
+            # 批次间额外延迟（推理模型需要更多休息时间）
+            if i + dynamic_batch_size < len(texts):
+                time.sleep(self.config.delay_between_requests * 1.5)
         
         return results
+    
+    def _calculate_dynamic_batch_size(self, texts: List[str], max_tokens_per_batch: int = 8000) -> int:
+        """动态计算批处理大小（推理模型优化版本）
+        
+        Args:
+            texts: 文本列表
+            max_tokens_per_batch: 每批次最大token数（推理模型更保守）
+            
+        Returns:
+            动态批处理大小
+        """
+        if not texts:
+            return min(self.config.batch_size, 3)  # 推理模型默认更小批次
+        
+        # 计算平均文本长度
+        total_chars = sum(len(text) for text in texts)
+        avg_chars = total_chars / len(texts)
+        
+        # 推理模型的token估算（包含大量推理过程开销）
+        estimated_tokens_per_text = avg_chars * 2.5  # 推理过程需要更多token
+        
+        if estimated_tokens_per_text <= 0:
+            return min(self.config.batch_size, 3)
+        
+        # 计算动态批处理大小
+        dynamic_size = max(1, min(self.config.batch_size, int(max_tokens_per_batch / estimated_tokens_per_text)))
+        
+        # 推理模型限制更严格
+        dynamic_size = min(dynamic_size, 5)  # 推理模型最大批次为5
+        
+        self.logger.debug(f"推理模型文本统计: 总数={len(texts)}, 平均长度={avg_chars:.1f}字符, 估算token={estimated_tokens_per_text:.1f}")
+        
+        return dynamic_size
     
     def _get_language_name(self, lang_code: str) -> str:
         """获取语言名称"""

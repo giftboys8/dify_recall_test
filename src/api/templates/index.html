@@ -378,6 +378,45 @@
                                                     <option value="paragraph_by_paragraph">Paragraph by Paragraph</option>
                                                 </select>
                                             </div>
+                                            
+                                            <!-- Smart Chunking Settings -->
+                                            <div class="mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="useSmartChunking" checked>
+                                                    <label class="form-check-label" for="useSmartChunking">
+                                                        Enable Smart Text Chunking
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Intelligently split and merge text chunks for better translation quality</small>
+                                            </div>
+                                            
+                                            <div class="mb-3" id="chunkingSettings">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Max Chunk Size</label>
+                                                        <input type="number" class="form-control" id="maxChunkChars" value="1500" min="500" max="3000" step="100" title="Maximum characters per text chunk">
+                                                        <small class="text-muted">500-3000 chars</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Min Chunk Size</label>
+                                                        <input type="number" class="form-control" id="minChunkChars" value="50" min="10" max="200" step="10" title="Minimum characters per text chunk">
+                                                        <small class="text-muted">10-200 chars</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Batch Processing Settings -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Batch Size</label>
+                                                <input type="number" class="form-control" id="batchSize" value="10" min="1" max="50" step="1" title="Number of text chunks to process in each batch">
+                                                <small class="text-muted">Dynamic batch sizing will be applied automatically</small>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Delay Between Requests (seconds)</label>
+                                                <input type="number" class="form-control" id="translationDelay" value="1.0" min="0" max="10" step="0.1" title="Delay between translation API requests">
+                                                <small class="text-muted">Helps avoid API rate limits</small>
+                                            </div>
                                         </form>
                                     </div>
                                 </div>

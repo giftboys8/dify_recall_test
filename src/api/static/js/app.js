@@ -509,6 +509,17 @@ class DifyTestApp {
         
         // Initialize translation provider UI
         this.updateTranslationProviderUI('nllb');
+        
+        // Smart chunking settings toggle
+        const useSmartChunking = document.getElementById('useSmartChunking');
+        if (useSmartChunking) {
+            useSmartChunking.addEventListener('change', (e) => {
+                const chunkingSettings = document.getElementById('chunkingSettings');
+                if (chunkingSettings) {
+                    chunkingSettings.style.display = e.target.checked ? 'block' : 'none';
+                }
+            });
+        }
     }
     
     updateTranslationProviderUI(provider) {
@@ -643,6 +654,15 @@ class DifyTestApp {
         const outputFormat = document.getElementById('outputFormat').value;
         const layoutOption = document.getElementById('layoutOption').value;
         
+        // Smart chunking settings
+        const useSmartChunking = document.getElementById('useSmartChunking').checked;
+        const maxChunkChars = parseInt(document.getElementById('maxChunkChars').value) || 1500;
+        const minChunkChars = parseInt(document.getElementById('minChunkChars').value) || 50;
+        
+        // Batch processing settings
+        const batchSize = parseInt(document.getElementById('batchSize').value) || 10;
+        const delay = parseFloat(document.getElementById('translationDelay').value) || 1.0;
+        
         if (sourceLanguage === targetLanguage) {
             this.showAlert('Source and target languages cannot be the same.', 'warning');
             return null;
@@ -653,7 +673,12 @@ class DifyTestApp {
             source_language: sourceLanguage,
             target_language: targetLanguage,
             output_format: outputFormat,
-            layout: layoutOption
+            layout: layoutOption,
+            use_smart_chunking: useSmartChunking,
+            max_chunk_chars: maxChunkChars,
+            min_chunk_chars: minChunkChars,
+            batch_size: batchSize,
+            delay: delay
         };
         
         if (['openai', 'deepseek', 'deepseek-reasoner'].includes(provider)) {

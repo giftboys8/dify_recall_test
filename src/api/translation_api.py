@@ -117,7 +117,10 @@ def translate_pdf():
             'layout': form_data.get('layout', 'side_by_side'),
             'replace_original': form_data.get('replace_original', 'false').lower() == 'true',
             'batch_size': int(form_data.get('batch_size', 10)),
-            'delay_between_requests': float(form_data.get('delay', 1.0))
+            'delay_between_requests': float(form_data.get('delay', 1.0)),
+            'use_smart_chunking': form_data.get('use_smart_chunking', 'true').lower() == 'true',
+            'max_chunk_chars': int(form_data.get('max_chunk_chars', 1500)),
+            'min_chunk_chars': int(form_data.get('min_chunk_chars', 50))
         }
         
         # 创建临时目录用于处理
@@ -250,7 +253,10 @@ def translate_multiple_pdfs():
             'layout': form_data.get('layout', 'side_by_side'),
             'replace_original': form_data.get('replace_original', 'false').lower() == 'true',
             'batch_size': int(form_data.get('batch_size', 10)),
-            'delay_between_requests': float(form_data.get('delay', 1.0))
+            'delay_between_requests': float(form_data.get('delay', 1.0)),
+            'use_smart_chunking': form_data.get('use_smart_chunking', 'true').lower() == 'true',
+            'max_chunk_chars': int(form_data.get('max_chunk_chars', 1500)),
+            'min_chunk_chars': int(form_data.get('min_chunk_chars', 50))
         }
         
         # 创建临时目录

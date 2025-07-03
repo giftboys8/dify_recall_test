@@ -39,6 +39,11 @@ class ProcessingConfig:
     delay_between_requests: float = 1.0
     max_retries: int = 3
     
+    # 智能分块配置
+    use_smart_chunking: bool = True
+    max_chunk_chars: int = 1500
+    min_chunk_chars: int = 50
+    
     # 文件配置
     keep_temp_files: bool = False
     output_directory: Optional[str] = None
@@ -126,14 +131,22 @@ class BatchProcessor:
             if 'temp_docx_path' in parse_result:
                 temp_files.append(parse_result['temp_docx_path'])
             
-            # 从文档数据中提取文本
+            # 从文档数据中提取文本（使用智能分块）
             document_data = parse_result['document_data']
-            extracted_texts = self.pdf_parser.get_text_for_translation(document_data)
+            extracted_texts = self.pdf_parser.get_text_for_translation(
+                document_data, 
+                use_smart_chunking=self.config.use_smart_chunking,
+                max_chars=self.config.max_chunk_chars,
+                min_chars=self.config.min_chunk_chars
+            )
             
             if not extracted_texts:
                 raise RuntimeError("PDF中未提取到任何文本")
             
-            self.logger.info(f"提取了 {len(extracted_texts)} 个文本段落")
+            if self.config.use_smart_chunking:
+                self.logger.info(f"智能分块后提取了 {len(extracted_texts)} 个文本块")
+            else:
+                self.logger.info(f"提取了 {len(extracted_texts)} 个文本段落")
             
             # 步骤2: 翻译文本
             self.logger.info("步骤2: 翻译文本内容")

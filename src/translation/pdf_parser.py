@@ -4,6 +4,7 @@
 """
 
 import os
+import re
 import tempfile
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -118,11 +119,12 @@ class PDFParser:
             'total_tables': len(tables)
         }
     
-    def get_text_for_translation(self, doc_data: Dict[str, Any]) -> List[str]:
+    def get_text_for_translation(self, doc_data: Dict[str, Any], use_smart_chunking: bool = True, max_chars: int = 1500, min_chars: int = 50) -> List[str]:
         """获取需要翻译的文本列表
         
         Args:
             doc_data: 文档数据
+            use_smart_chunking: 是否使用智能分块
             
         Returns:
             文本列表
@@ -140,7 +142,134 @@ class PDFParser:
                     if cell.strip():
                         texts.append(cell)
         
+        # 应用智能分块
+        if use_smart_chunking:
+            texts = self._apply_smart_chunking(texts, max_chars, min_chars)
+        
         return texts
+    
+    def _apply_smart_chunking(self, texts: List[str], max_chars: int = 1500, min_chars: int = 50) -> List[str]:
+        """应用智能文本分块
+        
+        Args:
+            texts: 原始文本列表
+            max_chars: 最大字符数
+            min_chars: 最小字符数
+            
+        Returns:
+            优化后的文本列表
+        """
+        chunked_texts = []
+        current_chunk = ""
+        
+        for text in texts:
+            text = text.strip()
+            if not text:
+                continue
+            
+            # 如果文本过长，需要分割
+            if len(text) > max_chars:
+                # 先保存当前累积的块
+                if current_chunk:
+                    chunked_texts.append(current_chunk.strip())
+                    current_chunk = ""
+                
+                # 分割长文本
+                split_texts = self._split_long_text(text, max_chars)
+                chunked_texts.extend(split_texts)
+            
+            # 如果文本较短，尝试与其他短文本合并
+            elif len(text) < min_chars:
+                if len(current_chunk + " " + text) <= max_chars:
+                    current_chunk += (" " if current_chunk else "") + text
+                else:
+                    if current_chunk:
+                        chunked_texts.append(current_chunk.strip())
+                    current_chunk = text
+            
+            # 中等长度文本
+            else:
+                # 先保存当前累积的块
+                if current_chunk:
+                    chunked_texts.append(current_chunk.strip())
+                    current_chunk = ""
+                
+                chunked_texts.append(text)
+        
+        # 保存最后的累积块
+        if current_chunk:
+            chunked_texts.append(current_chunk.strip())
+        
+        logger.info(f"智能分块: {len(texts)} -> {len(chunked_texts)} 个文本块")
+        return chunked_texts
+    
+    def _split_long_text(self, text: str, max_chars: int) -> List[str]:
+        """分割长文本，保持语义完整性
+        
+        Args:
+            text: 要分割的文本
+            max_chars: 最大字符数
+            
+        Returns:
+            分割后的文本列表
+        """
+        if len(text) <= max_chars:
+            return [text]
+        
+        chunks = []
+        
+        # 首先尝试按句子分割（中文和英文句号）
+        sentences = re.split(r'[。！？.!?]\s*', text)
+        current_chunk = ""
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            
+            # 恢复句号
+            if not sentence.endswith(('。', '！', '？', '.', '!', '?')):
+                sentence += '。'
+            
+            # 检查是否可以添加到当前块
+            test_chunk = current_chunk + (" " if current_chunk else "") + sentence
+            
+            if len(test_chunk) <= max_chars:
+                current_chunk = test_chunk
+            else:
+                # 保存当前块
+                if current_chunk:
+                    chunks.append(current_chunk)
+                
+                # 如果单个句子仍然太长，按字符强制分割
+                if len(sentence) > max_chars:
+                    chunks.extend(self._force_split_text(sentence, max_chars))
+                    current_chunk = ""
+                else:
+                    current_chunk = sentence
+        
+        # 保存最后的块
+        if current_chunk:
+            chunks.append(current_chunk)
+        
+        return chunks
+    
+    def _force_split_text(self, text: str, max_chars: int) -> List[str]:
+        """强制按字符数分割文本
+        
+        Args:
+            text: 要分割的文本
+            max_chars: 最大字符数
+            
+        Returns:
+            分割后的文本列表
+        """
+        chunks = []
+        for i in range(0, len(text), max_chars):
+            chunk = text[i:i + max_chars]
+            if chunk.strip():
+                chunks.append(chunk.strip())
+        return chunks
     
     def _get_temp_file_path(self, filename: str) -> str:
         """生成临时文件路径
