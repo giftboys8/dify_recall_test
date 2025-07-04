@@ -479,6 +479,27 @@ class UnifiedDatabaseManager:
             self.logger.error(f"Failed to save document notes: {e}")
             return False
     
+    def delete_document(self, doc_id: str) -> bool:
+        """删除文档及其所有相关数据"""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
+                
+                # 删除文档相关的所有数据
+                cursor.execute("DELETE FROM page_notes WHERE document_id = ?", (doc_id,))
+                cursor.execute("DELETE FROM bookmarks WHERE document_id = ?", (doc_id,))
+                cursor.execute("DELETE FROM annotations WHERE document_id = ?", (doc_id,))
+                cursor.execute("DELETE FROM learning_progress WHERE document_id = ?", (doc_id,))
+                cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+                
+                conn.commit()
+                self.logger.info(f"Successfully deleted document {doc_id} and all related data")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to delete document {doc_id}: {e}")
+            return False
+    
     def _clear_bookmarks(self, doc_id: str) -> None:
         """清空文档的所有书签"""
         try:

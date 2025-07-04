@@ -148,8 +148,8 @@ class DocumentLearningPlatform {
         }
         
         listContainer.innerHTML = documents.map(doc => `
-            <div class="document-list-item" data-doc-id="${doc.id}" onclick="documentPlatform.loadDocument('${doc.id}')">
-                <div class="d-flex align-items-center">
+            <div class="document-list-item" data-doc-id="${doc.id}">
+                <div class="d-flex align-items-center" onclick="documentPlatform.loadDocument('${doc.id}')" style="flex: 1; cursor: pointer;">
                     <i class="fas fa-file-${this.getFileIcon(doc.type)} fa-2x me-3 text-primary"></i>
                     <div class="flex-grow-1">
                         <h6 class="mb-1">${doc.name}</h6>
@@ -158,6 +158,9 @@ class DocumentLearningPlatform {
                         </small>
                     </div>
                 </div>
+                <button class="btn btn-sm btn-outline-danger ms-2" onclick="event.stopPropagation(); documentPlatform.deleteDocument('${doc.id}', '${doc.name}')" title="删除文档">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
         `).join('');
     }
@@ -221,6 +224,83 @@ class DocumentLearningPlatform {
         }
     }
     
+    async deleteDocument(docId, docName) {
+        // 确认删除
+        if (!confirm(`确定要删除文档 "${docName}" 吗？\n\n此操作将永久删除文档及其所有相关数据（笔记、书签、标注等），且无法恢复。`)) {
+            return;
+        }
+        
+        try {
+            this.showLoading(true);
+            const response = await fetch(`/api/documents/${encodeURIComponent(docId)}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showMessage('文档删除成功', 'success');
+                
+                // 如果删除的是当前正在查看的文档，清空查看器
+                if (this.currentDocument === docId) {
+                    this.currentDocument = null;
+                    this.resetViewer();
+                }
+                
+                // 重新加载文档列表
+                await this.loadDocuments();
+            } else {
+                this.showMessage(data.error || '删除失败', 'error');
+            }
+        } catch (error) {
+            console.error('删除文档失败:', error);
+            this.showMessage('删除文档失败', 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+    
+    resetViewer() {
+        // 重置查看器状态
+        const viewerContent = document.getElementById('viewerContent');
+        viewerContent.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                <div class="text-center">
+                    <i class="fas fa-file-alt fa-4x mb-3"></i>
+                    <h5>选择文档开始学习</h5>
+                    <p>上传或选择一个文档来开始您的学习之旅</p>
+                </div>
+            </div>
+        `;
+        
+        // 隐藏学习工具和页面导航
+        document.getElementById('learningTools').style.display = 'none';
+        document.getElementById('pageNavigation').style.display = 'none';
+        
+        // 清空笔记输入框
+        const noteInput = document.getElementById('currentPageNote');
+        if (noteInput) {
+            noteInput.value = '';
+        }
+        
+        // 重置数据
+        this.notes = { pages: {}, bookmarks: [], progress: 0 };
+        this.annotations = [];
+        this.currentPage = 1;
+        this.totalPages = 0;
+        this.pdfDoc = null;
+        
+        // 更新界面显示
+        this.updatePageNotesList();
+        this.updateBookmarksList();
+        this.updateAnnotationsList();
+        
+        // 清除选中状态
+        document.querySelectorAll('.document-list-item').forEach(item => {
+            item.classList.remove('active');
+        });
+    }
+    
     async loadDocument(docId) {
         try {
             this.showLoading(true);
@@ -229,6 +309,10 @@ class DocumentLearningPlatform {
             if (this.currentDocument && this.currentDocument !== docId) {
                 this.autoSaveCurrentPageNote();
             }
+            
+            // 立即清空查看器内容，防止显示上一个文档的内容
+            const viewerContent = document.getElementById('viewerContent');
+            viewerContent.innerHTML = '<div class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="text-muted mt-3">正在加载文档...</p></div>';
             
             // 立即清空当前页面笔记输入框，防止数据污染
             const noteInput = document.getElementById('currentPageNote');
@@ -245,6 +329,14 @@ class DocumentLearningPlatform {
             this.updateBookmarksList();
             this.updateAnnotationsList();
             
+            // 重置页面信息显示
+            document.getElementById('currentPageInfo').textContent = '- / -';
+            document.getElementById('zoomLevel').textContent = '-%';
+            
+            // 清空缩略图
+            const thumbnailContainer = document.getElementById('pageThumbnails');
+            thumbnailContainer.innerHTML = '';
+            
             // 设置新的当前文档ID（在加载数据之前）
             this.currentDocument = docId;
             
@@ -254,37 +346,175 @@ class DocumentLearningPlatform {
             });
             document.querySelector(`[data-doc-id="${docId}"]`).classList.add('active');
             
-            // 加载文档内容
-            const response = await fetch(`/api/documents/${docId}/view`);
+            // 获取文档信息以确定文件类型
+            const documentsResponse = await fetch('/api/documents');
+            const documentsData = await documentsResponse.json();
             
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                
-                // 加载PDF
-                await this.loadPDF(url);
-                
-                // 加载笔记和标注
-                await this.loadNotes(docId);
-                await this.loadAnnotations(docId);
-                
-                // 显示学习工具
-                document.getElementById('learningTools').style.display = 'block';
-                document.getElementById('pageNavigation').style.display = 'block';
-                document.getElementById('progressContainer').style.display = 'block';
-                
-                // 开始计时
-                this.startStudyTimer();
-                
-            } else {
-                this.showMessage('加载文档失败', 'error');
+            if (!documentsData.success) {
+                this.showMessage('获取文档信息失败', 'error');
+                return;
             }
+            
+            const currentDoc = documentsData.documents.find(doc => doc.id === docId);
+            if (!currentDoc) {
+                this.showMessage('文档不存在', 'error');
+                return;
+            }
+            
+            // 检查文件类型
+            const fileType = currentDoc.type.toLowerCase();
+            
+            if (fileType === '.pdf') {
+                // 加载PDF文档
+                const response = await fetch(`/api/documents/${docId}/view`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 加载PDF
+                    await this.loadPDF(url);
+                    
+                    // 加载笔记和标注
+                    await this.loadNotes(docId);
+                    await this.loadAnnotations(docId);
+                    
+                    // 显示学习工具
+                    document.getElementById('learningTools').style.display = 'block';
+                    document.getElementById('pageNavigation').style.display = 'block';
+                    document.getElementById('progressContainer').style.display = 'block';
+                    
+                    // 开始计时
+                    this.startStudyTimer();
+                    
+                } else {
+                    this.showMessage('加载文档失败', 'error');
+                }
+            } else {
+                // 处理非PDF文件
+                this.handleNonPDFDocument(currentDoc);
+            }
+            
         } catch (error) {
             console.error('加载文档失败:', error);
             this.showMessage('加载文档失败', 'error');
         } finally {
             this.showLoading(false);
         }
+    }
+    
+    async handleNonPDFDocument(doc) {
+        // 清空查看器内容
+        const viewerContent = document.getElementById('viewerContent');
+        
+        // 获取文件类型的友好名称
+        const fileTypeNames = {
+            '.ppt': 'PowerPoint 演示文稿',
+            '.pptx': 'PowerPoint 演示文稿',
+            '.doc': 'Word 文档',
+            '.docx': 'Word 文档',
+            '.txt': '文本文档'
+        };
+        
+        const fileTypeName = fileTypeNames[doc.type] || '文档';
+        
+        // 如果是文本文件，尝试加载并显示内容
+        if (doc.type === '.txt') {
+            try {
+                const response = await fetch(`/api/documents/${doc.id}/view`);
+                if (response.ok) {
+                    const textContent = await response.text();
+                    
+                    viewerContent.innerHTML = `
+                        <div class="text-viewer">
+                            <div class="text-content p-4">
+                                <div class="mb-3">
+                                    <h5><i class="fas fa-file-text"></i> ${doc.name}</h5>
+                                    <small class="text-muted">文件大小: ${this.formatFileSize(doc.size)}</small>
+                                </div>
+                                <div class="text-content-body" style="white-space: pre-wrap; font-family: monospace; background: #f8f9fa; padding: 20px; border-radius: 5px; max-height: 600px; overflow-y: auto;">
+                                    ${this.escapeHtml(textContent)}
+                                </div>
+                                <div class="mt-3">
+                                    <a href="/api/documents/${doc.id}/view" 
+                                       class="btn btn-outline-primary btn-sm" 
+                                       download="${doc.name}">
+                                        <i class="fas fa-download"></i> 下载文件
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Failed to load text content');
+                }
+            } catch (error) {
+                console.error('加载文本内容失败:', error);
+                this.showNonTextDocument(doc, fileTypeName);
+            }
+        } else {
+            this.showNonTextDocument(doc, fileTypeName);
+        }
+        
+        // 设置默认页面信息（用于笔记功能）
+        this.totalPages = 1;
+        this.currentPage = 1;
+        this.pdfDoc = null;
+        
+        // 更新页面信息显示
+        document.getElementById('currentPageInfo').textContent = '1 / 1';
+        document.getElementById('zoomLevel').textContent = '100%';
+        
+        // 清空缩略图
+        const thumbnailContainer = document.getElementById('pageThumbnails');
+        thumbnailContainer.innerHTML = `
+            <div class="page-thumbnail active">1</div>
+        `;
+        
+        // 加载笔记（仍然支持笔记功能）
+        this.loadNotes(doc.id);
+        
+        // 显示学习工具（但隐藏不适用的功能）
+        document.getElementById('learningTools').style.display = 'block';
+        document.getElementById('pageNavigation').style.display = 'none'; // 隐藏页面导航
+        document.getElementById('progressContainer').style.display = 'block';
+        
+        // 加载当前页面笔记
+        this.loadCurrentPageNote();
+        
+        // 开始计时
+        this.startStudyTimer();
+    }
+    
+    showNonTextDocument(doc, fileTypeName) {
+        const viewerContent = document.getElementById('viewerContent');
+        
+        viewerContent.innerHTML = `
+            <div class="non-pdf-viewer">
+                <div class="text-center p-5">
+                    <i class="fas fa-file-${this.getFileIcon(doc.type)} fa-5x text-muted mb-4"></i>
+                    <h4 class="text-muted mb-3">${fileTypeName}预览</h4>
+                    <p class="text-muted mb-4">
+                        当前系统暂不支持在线预览${fileTypeName}，但您仍可以使用学习笔记功能。
+                    </p>
+                    <div class="mb-4">
+                        <strong>文件名：</strong> ${doc.name}<br>
+                        <strong>文件大小：</strong> ${this.formatFileSize(doc.size)}
+                    </div>
+                    <a href="/api/documents/${doc.id}/view" 
+                       class="btn btn-primary" 
+                       download="${doc.name}">
+                        <i class="fas fa-download"></i> 下载文件
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     async loadPDF(url) {

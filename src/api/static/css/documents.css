@@ -173,6 +173,50 @@
     background: white;
 }
 
+/* 非PDF文档查看器样式 */
+.non-pdf-viewer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin: 2rem;
+}
+
+.non-pdf-viewer .text-center {
+    max-width: 500px;
+    padding: 3rem;
+}
+
+.non-pdf-viewer i {
+    opacity: 0.7;
+}
+
+.non-pdf-viewer h4 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.non-pdf-viewer p {
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.non-pdf-viewer .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.non-pdf-viewer .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
 /* 页面缩略图 */
 .page-thumbnails {
     width: 120px;

@@ -431,39 +431,147 @@ class WebInterface:
                     if file.filename == '':
                         return jsonify({'success': False, 'error': 'No file selected'}), 400
                     
-                    # Validate file type
+                    # Check file type
                     allowed_extensions = {'.pdf', '.ppt', '.pptx', '.doc', '.docx'}
                     file_ext = Path(file.filename).suffix.lower()
                     if file_ext not in allowed_extensions:
-                        return jsonify({'success': False, 'error': 'Unsupported file type'}), 400
+                        return jsonify({'success': False, 'error': f'Unsupported file type: {file_ext}'}), 400
                     
-                    # Save file
+                    # Create upload directory
                     docs_dir = Path('/opt/work/kb/uploads/documents')
                     docs_dir.mkdir(parents=True, exist_ok=True)
                     
+                    # Generate unique filename with timestamp
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                     filename = f"{timestamp}_{file.filename}"
                     file_path = docs_dir / filename
                     
+                    # Save file
                     file.save(str(file_path))
                     
-                    # Register document in unified database
-                    doc_id = file_path.stem
-                    self.db_manager.register_document(doc_id, filename, str(file_path))
+                    # Handle PPT files - convert to PDF immediately
+                    final_file_path = file_path
+                    final_filename = file.filename
+                    final_file_ext = file_ext
                     
+                    if file_ext in ['.ppt', '.pptx']:
+                        try:
+                            from ..translation.ppt_parser import PPTParser
+                            ppt_parser = PPTParser()
+                            
+                            # Convert PPT to PDF or text (fallback)
+                            if ppt_parser.is_available():
+                                # Full PDF conversion available
+                                pdf_filename = f"{timestamp}_{Path(file.filename).stem}.pdf"
+                                pdf_file_path = docs_dir / pdf_filename
+                                converted_path = ppt_parser.convert_ppt_to_pdf(str(file_path), str(pdf_file_path))
+                                
+                                if converted_path and converted_path.endswith('.pdf'):
+                                    # Delete original PPT file
+                                    file_path.unlink()
+                                    
+                                    # Use PDF file as the final document
+                                    final_file_path = pdf_file_path
+                                    final_filename = f"{Path(file.filename).stem}.pdf"
+                                    final_file_ext = '.pdf'
+                                    
+                                    self.logger.info(f"PPT converted to PDF: {pdf_filename}")
+                                else:
+                                    self.logger.error(f"Failed to convert PPT to PDF: {file.filename}")
+                                    return jsonify({'success': False, 'error': 'Failed to convert PPT to PDF'}), 500
+                            else:
+                                # Fallback to text extraction
+                                txt_filename = f"{timestamp}_{Path(file.filename).stem}.txt"
+                                txt_file_path = docs_dir / txt_filename
+                                converted_path = ppt_parser.convert_ppt_to_pdf(str(file_path), str(txt_file_path))
+                                
+                                if converted_path and converted_path.endswith('.txt'):
+                                    # Delete original PPT file
+                                    file_path.unlink()
+                                    
+                                    # Use text file as the final document
+                                    final_file_path = txt_file_path
+                                    final_filename = f"{Path(file.filename).stem}.txt"
+                                    final_file_ext = '.txt'
+                                    
+                                    self.logger.info(f"PPT converted to text: {txt_filename}")
+                                else:
+                                    self.logger.error(f"Failed to convert PPT to text: {file.filename}")
+                                    return jsonify({'success': False, 'error': 'Failed to convert PPT to text'}), 500
+                        except Exception as e:
+                            self.logger.error(f"Error converting PPT: {str(e)}")
+                            return jsonify({'success': False, 'error': f'Error converting PPT: {str(e)}'}), 500
+                    
+                    # Register document in database
+                    doc_id = final_file_path.stem
+                    self.db_manager.register_document(doc_id, final_filename, str(final_file_path))
+                    
+                    self.logger.info(f"Document uploaded successfully: {final_filename}")
                     return jsonify({
                         'success': True,
                         'message': 'Document uploaded successfully',
                         'document': {
                             'id': doc_id,
-                            'name': filename,
-                            'size': file_path.stat().st_size,
-                            'type': file_ext
+                            'name': final_filename,
+                            'size': final_file_path.stat().st_size,
+                            'type': final_file_ext
                         }
                     })
-                
+                    
                 except Exception as e:
+                    self.logger.error(f"Failed to upload document: {str(e)}")
                     return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @self.app.route('/api/documents/<doc_id>', methods=['DELETE'])
+        def delete_document(doc_id):
+            """Delete a document and its associated data."""
+            try:
+                # URL decode the doc_id to handle special characters
+                from urllib.parse import unquote
+                decoded_doc_id = unquote(doc_id)
+                
+                docs_dir = Path('/opt/work/kb/uploads/documents')
+                
+                # Find the document file
+                doc_file = None
+                for file_path in docs_dir.iterdir():
+                    if file_path.is_file() and decoded_doc_id in file_path.stem:
+                        doc_file = file_path
+                        break
+                
+                if not doc_file:
+                    return jsonify({'success': False, 'error': f'Document not found: {decoded_doc_id}'}), 404
+                
+                # Delete the main document file
+                doc_file.unlink()
+                
+                # Delete document data from database
+                self.db_manager.delete_document(decoded_doc_id)
+                
+                # Delete associated notes and annotations
+                notes_dir = Path('/opt/work/kb/data/notes')
+                annotations_dir = Path('/opt/work/kb/data/annotations')
+                
+                # Delete notes file if exists
+                notes_file = notes_dir / f"{decoded_doc_id}.json"
+                if notes_file.exists():
+                    notes_file.unlink()
+                
+                # Delete annotations file if exists
+                annotations_file = annotations_dir / f"{decoded_doc_id}.json"
+                if annotations_file.exists():
+                    annotations_file.unlink()
+                
+                self.logger.info(f"Document deleted successfully: {decoded_doc_id}")
+                return jsonify({
+                    'success': True,
+                    'message': 'Document deleted successfully',
+                    'deleted_document': decoded_doc_id
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Failed to delete document {doc_id}: {str(e)}")
+                return jsonify({'success': False, 'error': str(e)}), 500
         
         @self.app.route('/api/documents/<doc_id>/notes', methods=['GET', 'POST', 'PUT'])
         def document_notes_api(doc_id):
@@ -537,6 +645,7 @@ class WebInterface:
                 if not doc_file.exists():
                     return jsonify({'success': False, 'error': f'File does not exist: {doc_file}'}), 404
                 
+                # Since PPT files are converted to PDF during upload, we only serve the file directly
                 return send_file(str(doc_file), as_attachment=False)
             
             except Exception as e:
