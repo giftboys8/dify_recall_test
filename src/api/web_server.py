@@ -27,6 +27,7 @@ from flask_cors import CORS
 try:
     from ..core.tester import EnhancedDifyRecallTester, TestCase, RecallResult, load_test_cases_from_csv
     from ..core.basic_tester import DifyRecallTester
+    from ..core.unified_database_manager import UnifiedDatabaseManager
     from ..utils import setup_logger, get_logger, ConfigManager, load_config
 except ImportError:
     # Fallback for direct execution
@@ -34,6 +35,7 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from core.tester import EnhancedDifyRecallTester, TestCase, RecallResult, load_test_cases_from_csv
     from core.basic_tester import DifyRecallTester
+    from core.unified_database_manager import UnifiedDatabaseManager
     from utils import setup_logger, get_logger, ConfigManager, load_config
 
 
@@ -114,6 +116,9 @@ class WebInterface:
         self.test_results = []
         self.test_cases = []
         
+        # Initialize database manager
+        self.db_manager = UnifiedDatabaseManager()
+        
         self.logger.info("Web interface initialized")
     
     def _register_blueprints(self):
@@ -144,6 +149,11 @@ class WebInterface:
         def ideas():
             """Ideas page."""
             return render_template('ideas.html')
+        
+        @self.app.route('/documents')
+        def documents():
+            """Document learning page."""
+            return render_template('documents.html')
         
         @self.app.route('/api/config', methods=['GET', 'POST'])
         def config_api():
@@ -382,6 +392,154 @@ class WebInterface:
             
             except Exception as e:
                 self.logger.error(f"Export failed: {e}")
+                return jsonify({'success': False, 'error': str(e)}), 500
+        
+        # Document Learning API Routes
+        @self.app.route('/api/documents', methods=['GET', 'POST'])
+        def documents_api():
+            """Documents management API."""
+            if request.method == 'GET':
+                # Get list of uploaded documents
+                try:
+                    docs_dir = Path('/opt/work/kb/uploads/documents')
+                    docs_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    documents = []
+                    for doc_file in docs_dir.glob('*'):
+                        if doc_file.is_file():
+                            # Use the full filename without extension as ID for better matching
+                            doc_id = doc_file.stem
+                            documents.append({
+                                'id': doc_id,
+                                'name': doc_file.name,
+                                'size': doc_file.stat().st_size,
+                                'created': datetime.fromtimestamp(doc_file.stat().st_ctime).isoformat(),
+                                'type': doc_file.suffix.lower()
+                            })
+                    
+                    return jsonify({'success': True, 'documents': documents})
+                except Exception as e:
+                    return jsonify({'success': False, 'error': str(e)}), 500
+            
+            elif request.method == 'POST':
+                # Upload new document
+                try:
+                    if 'file' not in request.files:
+                        return jsonify({'success': False, 'error': 'No file provided'}), 400
+                    
+                    file = request.files['file']
+                    if file.filename == '':
+                        return jsonify({'success': False, 'error': 'No file selected'}), 400
+                    
+                    # Validate file type
+                    allowed_extensions = {'.pdf', '.ppt', '.pptx', '.doc', '.docx'}
+                    file_ext = Path(file.filename).suffix.lower()
+                    if file_ext not in allowed_extensions:
+                        return jsonify({'success': False, 'error': 'Unsupported file type'}), 400
+                    
+                    # Save file
+                    docs_dir = Path('/opt/work/kb/uploads/documents')
+                    docs_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"{timestamp}_{file.filename}"
+                    file_path = docs_dir / filename
+                    
+                    file.save(str(file_path))
+                    
+                    # Register document in unified database
+                    doc_id = file_path.stem
+                    self.db_manager.register_document(doc_id, filename, str(file_path))
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': 'Document uploaded successfully',
+                        'document': {
+                            'id': doc_id,
+                            'name': filename,
+                            'size': file_path.stat().st_size,
+                            'type': file_ext
+                        }
+                    })
+                
+                except Exception as e:
+                    return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @self.app.route('/api/documents/<doc_id>/notes', methods=['GET', 'POST', 'PUT'])
+        def document_notes_api(doc_id):
+            """Document notes API."""
+            if request.method == 'GET':
+                # Get notes for document
+                try:
+                    notes = self.db_manager.get_document_notes(doc_id)
+                    if not notes:
+                        notes = {'pages': {}, 'bookmarks': [], 'progress': 0}
+                    
+                    return jsonify({'success': True, 'notes': notes})
+                except Exception as e:
+                    return jsonify({'success': False, 'error': str(e)}), 500
+            
+            elif request.method in ['POST', 'PUT']:
+                # Save/update notes
+                try:
+                    notes_data = request.json
+                    self.db_manager.save_document_notes(doc_id, notes_data)
+                    
+                    return jsonify({'success': True, 'message': 'Notes saved successfully'})
+                except Exception as e:
+                    return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @self.app.route('/api/documents/<doc_id>/annotations', methods=['GET', 'POST'])
+        def document_annotations_api(doc_id):
+            """Document annotations API."""
+            if request.method == 'GET':
+                # Get annotations for document
+                try:
+                    annotations = self.db_manager.get_document_annotations(doc_id)
+                    return jsonify({'success': True, 'annotations': annotations})
+                except Exception as e:
+                    return jsonify({'success': False, 'error': str(e)}), 500
+            
+            elif request.method == 'POST':
+                # Add new annotation
+                try:
+                    annotation = request.json
+                    annotation_id = self.db_manager.add_document_annotation(doc_id, annotation)
+                    annotation['id'] = annotation_id
+                    
+                    return jsonify({'success': True, 'annotation': annotation})
+                except Exception as e:
+                    return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @self.app.route('/api/documents/<path:doc_id>/view')
+        def view_document(doc_id):
+            """View document content."""
+            try:
+                # Use absolute path to ensure correct location
+                docs_dir = Path('/opt/work/kb/uploads/documents')
+                
+                # URL decode the doc_id to handle special characters
+                from urllib.parse import unquote
+                decoded_doc_id = unquote(doc_id)
+                
+                # Try to find the file by exact match first
+                doc_file = docs_dir / f"{decoded_doc_id}.pdf"
+                if not doc_file.exists():
+                    # Try to find by partial match (for files with timestamps)
+                    doc_files = [f for f in docs_dir.iterdir() if f.is_file() and decoded_doc_id in f.name]
+                    if not doc_files:
+                        # Try without extension
+                        doc_files = [f for f in docs_dir.iterdir() if f.is_file() and decoded_doc_id in f.stem]
+                        if not doc_files:
+                            return jsonify({'success': False, 'error': f'Document not found: {decoded_doc_id}'}), 404
+                    doc_file = doc_files[0]
+                
+                if not doc_file.exists():
+                    return jsonify({'success': False, 'error': f'File does not exist: {doc_file}'}), 404
+                
+                return send_file(str(doc_file), as_attachment=False)
+            
+            except Exception as e:
                 return jsonify({'success': False, 'error': str(e)}), 500
     
     def run(self, host='127.0.0.1', port=8080, debug=False):

@@ -1,0 +1,41 @@
+[
+  {
+    "type": "highlight",
+    "page": 1,
+    "color": "#ffeb3b",
+    "coordinates": {
+      "x": 106,
+      "y": 467,
+      "width": 390,
+      "height": 33
+    },
+    "created": "2025-07-04T09:14:26.159901",
+    "id": "1751591666159"
+  },
+  {
+    "type": "highlight",
+    "page": 1,
+    "color": "#e91e63",
+    "coordinates": {
+      "x": 500,
+      "y": 575,
+      "width": 0,
+      "height": 0
+    },
+    "created": "2025-07-04T09:14:36.026932",
+    "id": "1751591676026"
+  },
+  {
+    "color": "#e91e63",
+    "coordinates": {
+      "height": 0,
+      "width": 0,
+      "x": 500,
+      "y": 575
+    },
+    "created": "2025-07-04T09:26:09.966156",
+    "id": "1751592369966",
+    "page": 1,
+    "type": "highlight"
+  }
+]
