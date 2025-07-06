@@ -1,0 +1,771 @@
+/**
+ * 文档学习平台样式
+ * 提供现代化、响应式的UI设计
+ */
+
+/* 全局样式 */
+.document-learning-container {
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+    background: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    height: 100vh;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+}
+
+.sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: white;
+}
+
+.sidebar-content {
+    padding: 1rem;
+}
+
+/* 文档列表样式 */
+.document-list-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.document-list-item:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.document-list-item.active {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+}
+
+/* 主内容区域 */
+.main-content {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 工具栏样式 */
+.viewer-toolbar {
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.5rem;
+    border-right: 1px solid #dee2e6;
+}
+
+.toolbar-group:last-child {
+    border-right: none;
+}
+
+.toolbar-btn {
+    background: none;
+    border: 1px solid #dee2e6;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #495057;
+    font-size: 0.875rem;
+}
+
+.toolbar-btn:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.toolbar-btn.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 页面信息显示 */
+.page-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* 颜色选择器 */
+.color-options {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.color-option {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.color-option.selected {
+    border-color: #007bff;
+    transform: scale(1.2);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* 文档查看器 */
+.document-viewer {
+    flex: 1;
+    display: flex;
+    position: relative;
+    background: #f5f5f5;
+}
+
+.viewer-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    overflow: auto;
+    position: relative;
+}
+
+.pdf-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 4px;
+    background: white;
+}
+
+/* 非PDF文档查看器样式 */
+.non-pdf-viewer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin: 2rem;
+}
+
+.non-pdf-viewer .text-center {
+    max-width: 500px;
+    padding: 3rem;
+}
+
+.non-pdf-viewer i {
+    opacity: 0.7;
+}
+
+.non-pdf-viewer h4 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.non-pdf-viewer p {
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.non-pdf-viewer .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.non-pdf-viewer .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* 页面缩略图 */
+.page-thumbnails {
+    width: 120px;
+    background: white;
+    border-left: 1px solid #dee2e6;
+    padding: 1rem 0.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.page-thumbnail {
+    width: 80px;
+    height: 100px;
+    border: 2px solid #dee2e6;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.page-thumbnail:hover {
+    border-color: #007bff;
+    background: #f8f9fa;
+}
+
+.page-thumbnail.active {
+    border-color: #007bff;
+    background: #e3f2fd;
+    color: #007bff;
+    font-weight: bold;
+}
+
+/* 学习面板 */
+.learning-panel {
+    width: 350px;
+    background: white;
+    border-left: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.panel-header {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+/* 标签页样式 */
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #6c757d;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.nav-tabs .nav-link.active {
+    background: none;
+    border-bottom-color: #007bff;
+    color: #007bff;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: #007bff;
+    color: #007bff;
+}
+
+/* 笔记项样式 */
+.note-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.note-item:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.note-content {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+/* 进度条样式 */
+.progress-container {
+    padding: 1rem;
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, #007bff, #0056b3);
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+    text-align: center;
+}
+
+/* 学习统计 */
+.study-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px solid #e9ecef;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #007bff;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* 标注样式 */
+.highlight {
+    pointer-events: auto;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.highlight:hover {
+    opacity: 0.5 !important;
+}
+
+.highlight.selected {
+    box-shadow: 0 0 0 2px #007bff;
+    opacity: 0.6 !important;
+}
+
+/* 选择框样式 */
+#selectionBox {
+    border: 2px dashed #007bff !important;
+    background: rgba(0, 123, 255, 0.1) !important;
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* 标注菜单 */
+.annotation-menu {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.25rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1001;
+}
+
+/* 全屏模式 */
+.document-viewer.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background: #000;
+}
+
+.document-viewer.fullscreen .viewer-content {
+    background: #000;
+}
+
+.document-viewer.fullscreen .pdf-canvas {
+    box-shadow: none;
+}
+
+/* 演示模式 */
+.document-viewer.presentation-mode {
+    background: #000;
+}
+
+.document-viewer.presentation-mode .viewer-toolbar {
+    display: none;
+}
+
+.document-viewer.presentation-mode .page-thumbnails {
+    display: none;
+}
+
+.document-viewer.presentation-mode .learning-panel {
+    display: none;
+}
+
+/* 加载覆盖层 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25rem solid #e9ecef;
+    border-top: 0.25rem solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .learning-panel {
+        width: 300px;
+    }
+    
+    .page-thumbnails {
+        width: 100px;
+    }
+    
+    .page-thumbnail {
+        width: 70px;
+        height: 90px;
+    }
+}
+
+@media (max-width: 992px) {
+    .sidebar {
+        position: fixed;
+        left: -300px;
+        width: 300px;
+        z-index: 1000;
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.show {
+        left: 0;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .learning-panel {
+        position: fixed;
+        right: -350px;
+        z-index: 1000;
+        transition: right 0.3s ease;
+    }
+    
+    .learning-panel.show {
+        right: 0;
+    }
+    
+    .page-thumbnails {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .toolbar-group {
+        padding: 0 0.25rem;
+    }
+    
+    .toolbar-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .viewer-content {
+        padding: 1rem;
+    }
+    
+    .color-option {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .viewer-toolbar {
+        padding: 0.25rem 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .toolbar-group {
+        margin-bottom: 0.25rem;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.25rem;
+    }
+    
+    .page-info {
+        font-size: 0.75rem;
+    }
+    
+    .study-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 自定义滚动条 */
+.sidebar::-webkit-scrollbar,
+.panel-content::-webkit-scrollbar,
+.page-thumbnails::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track,
+.panel-content::-webkit-scrollbar-track,
+.page-thumbnails::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb,
+.panel-content::-webkit-scrollbar-thumb,
+.page-thumbnails::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover,
+.panel-content::-webkit-scrollbar-thumb:hover,
+.page-thumbnails::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 动画效果 */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+/* 笔记显示优化样式 */
+.note-item {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.note-item:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.note-content {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #212529;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    word-wrap: break-word;
+}
+
+.note-metadata {
+    border-top: 1px solid #f1f3f4;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.note-timestamps {
+    text-align: right;
+    line-height: 1.2;
+}
+
+.note-timestamps small {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.badge.bg-secondary {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #6c757d !important;
+}
+
+/* 工具提示 */
+.tooltip {
+    font-size: 0.75rem;
+}
+
+/* 表单样式优化 */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* 徽章样式 */
+.badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* 成功/错误状态 */
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-info {
+    color: #17a2b8 !important;
+}
+
+/* 打印样式 */
+@media print {
+    .sidebar,
+    .viewer-toolbar,
+    .page-thumbnails,
+    .learning-panel {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin: 0 !important;
+    }
+    
+    .viewer-content {
+        padding: 0 !important;
+    }
+    
+    .pdf-canvas {
+        box-shadow: none !important;
+        max-width: 100% !important;
+        max-height: none !important;
+    }
+}

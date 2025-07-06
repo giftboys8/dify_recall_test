@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dify KB Recall Testing Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <style>
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .metric-card {
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-success {
+            color: #28a745;
+        }
+        .status-error {
+            color: #dc3545;
+        }
+        .loading {
+            display: none;
+        }
+        .results-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 bg-light p-4">
+                <h4 class="mb-4"><i class="fas fa-search"></i> Dify KB Recall Test</h4>
+                
+                <!-- Configuration Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-cog"></i> API Configuration</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="configForm">
+                            <div class="mb-3">
+                                <label class="form-label">API Base URL</label>
+                                <input type="url" class="form-control" id="apiBaseUrl" placeholder="https://api.dify.ai">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">API Key</label>
+                                <input type="password" class="form-control" id="apiKey" placeholder="Enter your Dify API key" title="Dify API key for authentication">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Dataset ID</label>
+                                <input type="text" class="form-control" id="datasetId" placeholder="Dataset ID">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Top K</label>
+                                <input type="number" class="form-control" id="topK" value="10" min="1" max="50" placeholder="Number of results to retrieve" title="Maximum number of search results to return">
+                            </div>
+                            
+                            <!-- Advanced Settings -->
+                            <div class="mb-3">
+                                <button class="btn btn-outline-secondary btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advancedSettings">
+                                    <i class="fas fa-cog"></i> Advanced Settings
+                                </button>
+                            </div>
+                            
+                            <div class="collapse" id="advancedSettings">
+                                <div class="mb-3">
+                                    <label class="form-label">Search Method</label>
+                                    <select class="form-control" id="searchMethod" title="Select the search method to use for retrieving documents">
+                                        <option value="semantic_search">Semantic Search</option>
+                                        <option value="keyword_search">Keyword Search</option>
+                                        <option value="hybrid_search">Hybrid Search</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="rerankingEnabled" checked>
+                                        <label class="form-check-label" for="rerankingEnabled">
+                                            Enable Reranking
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3" id="rerankingSettings">
+                                    <label class="form-label">Reranking Provider</label>
+                                    <select class="form-control" id="rerankingProvider" title="Select the provider for reranking model">
+                                        <option value="openai">OpenAI</option>
+                                        <option value="cohere">Cohere</option>
+                                        <option value="jina">Jina</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Reranking Model</label>
+                                    <input type="text" class="form-control" id="rerankingModel" value="rerank-v1" placeholder="Reranking model name" title="Name of the reranking model to use">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Embedding Provider</label>
+                                    <select class="form-control" id="embeddingProvider" title="Select the provider for embedding model">
+                                    <option value="zhipuai">ZhipuAI</option>
+                                    <option value="openai">OpenAI</option>
+                                </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Embedding Model</label>
+                                    <input type="text" class="form-control" id="embeddingModel" value="embedding-3" placeholder="Embedding model name" title="Name of the embedding model to use">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="scoreThresholdEnabled">
+                                        <label class="form-check-label" for="scoreThresholdEnabled">
+                                            Enable Score Threshold
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3" id="scoreThresholdSettings" style="display: none;">
+                                    <label class="form-label">Score Threshold</label>
+                                    <input type="number" class="form-control" id="scoreThreshold" value="0.55" min="0" max="1" step="0.01" placeholder="Minimum score threshold" title="Minimum score threshold for filtering results">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Delay Between Requests (seconds)</label>
+                                    <input type="number" class="form-control" id="delayBetweenRequests" value="1.0" min="0" step="0.1" placeholder="Delay between API requests" title="Delay in seconds between consecutive API requests">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-save"></i> Save Configuration
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Test Cases Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-file-csv"></i> Test Cases</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Upload CSV File</label>
+                            <input type="file" class="form-control" id="csvFile" accept=".csv" title="Select CSV file containing test cases">
+                        </div>
+                        <button type="button" class="btn btn-success w-100 mb-2" id="loadCsvBtn">
+                            <i class="fas fa-upload"></i> Load Test Cases
+                        </button>
+                        <button type="button" class="btn btn-warning w-100" id="clearCasesBtn">
+                            <i class="fas fa-trash"></i> Clear Cases
+                        </button>
+                        <div class="mt-2">
+                            <small class="text-muted">Test cases loaded: <span id="testCaseCount">0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Execution -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-play"></i> Test Execution</h6>
+                    </div>
+                    <div class="card-body">
+                        <button type="button" class="btn btn-primary w-100 mb-2" id="runTestBtn">
+                            <i class="fas fa-play"></i> Run Tests
+                        </button>
+                        <button type="button" class="btn btn-secondary w-100" id="clearResultsBtn">
+                            <i class="fas fa-broom"></i> Clear Results
+                        </button>
+                        <div class="loading mt-3 text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div class="mt-2">Running tests...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 p-4">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="recall-tab" data-bs-toggle="tab" data-bs-target="#recall-panel" type="button" role="tab">
+                            <i class="fas fa-search"></i> Recall Testing
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="translation-tab" data-bs-toggle="tab" data-bs-target="#translation-panel" type="button" role="tab">
+                            <i class="fas fa-language"></i> PDF Translation
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ideas" target="_blank">
+                            <i class="fas fa-lightbulb"></i> Ideas Collection
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documents" target="_blank">
+                            <i class="fas fa-book-open"></i> Document Learning
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/websites" target="_blank">
+                            <i class="fas fa-globe"></i> Website Management
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- Tab Content -->
+                <div class="tab-content" id="mainTabContent">
+                    <!-- Recall Testing Panel -->
+                    <div class="tab-pane fade show active" id="recall-panel" role="tabpanel">
+                        <!-- Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Total Tests</h5>
+                                <h2 class="text-primary" id="totalTests">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Successful</h5>
+                                <h2 class="text-success" id="successfulTests">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Failed</h5>
+                                <h2 class="text-danger" id="failedTests">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Success Rate</h5>
+                                <h2 class="text-info" id="successRate">0%</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Cases Table -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list"></i> Test Cases</h5>
+                        <button class="btn btn-sm btn-outline-primary" id="addCaseBtn" title="Add new test case">
+                            <i class="fas fa-plus" aria-hidden="true"></i> Add Case
+                            <span class="visually-hidden">Add new test case</span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive results-table">
+                            <table class="table table-striped" id="testCasesTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Query</th>
+                                        <th>Expected Answer</th>
+                                        <th>Category</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">No test cases loaded</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Test Results</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-success" id="exportCsvBtn">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" id="exportJsonBtn">
+                                <i class="fas fa-download"></i> Export JSON
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive results-table">
+                            <table class="table table-striped" id="resultsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Test ID</th>
+                                        <th>Query</th>
+                                        <th>Status</th>
+                                        <th>Documents</th>
+                                        <th>Max Score</th>
+                                        <th>Avg Score</th>
+                                        <th>Response Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No results available</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                    </div>
+                    <!-- End Recall Testing Panel -->
+                    
+                    <!-- PDF Translation Panel -->
+                    <div class="tab-pane fade" id="translation-panel" role="tabpanel">
+                        <div class="row">
+                            <!-- Translation Configuration -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-cog"></i> Translation Settings</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="translationForm">
+                                            <div class="mb-3">
+                                                <label class="form-label">Translation Provider</label>
+                                                <select class="form-control" id="translationProvider" title="Select translation provider">
+                                                    <option value="nllb">NLLB (Local)</option>
+                                                    <option value="openai">OpenAI</option>
+                                                    <option value="deepseek">DeepSeek Chat</option>
+                                                    <option value="deepseek-reasoner">DeepSeek Reasoner</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Source Language</label>
+                                                <select class="form-control" id="sourceLanguage" title="Select source language">
+                                                    <option value="auto">Auto Detect</option>
+                                                    <option value="en">English</option>
+                                                    <option value="zh-CN">Chinese (Simplified)</option>
+                                                    <option value="ja">Japanese</option>
+                                                    <option value="ko">Korean</option>
+                                                    <option value="fr">French</option>
+                                                    <option value="de">German</option>
+                                                    <option value="es">Spanish</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Target Language</label>
+                                                <select class="form-control" id="targetLanguage" title="Select target language">
+                                                    <option value="zh-CN">Chinese (Simplified)</option>
+                                                    <option value="en">English</option>
+                                                    <option value="ja">Japanese</option>
+                                                    <option value="ko">Korean</option>
+                                                    <option value="fr">French</option>
+                                                    <option value="de">German</option>
+                                                    <option value="es">Spanish</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3" id="apiKeyGroup" style="display: none;">
+                                                <label class="form-label">API Key</label>
+                                                <input type="password" class="form-control" id="translationApiKey" placeholder="Enter API key">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Output Format</label>
+                                                <select class="form-control" id="outputFormat" title="Select output format">
+                                                    <option value="docx">DOCX</option>
+                                                    <option value="pdf">PDF</option>
+                                                    <option value="both">Both</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Layout</label>
+                                                <select class="form-control" id="layoutOption" title="Select layout option">
+                                                    <option value="side_by_side">Side by Side</option>
+                                                    <option value="paragraph_by_paragraph">Paragraph by Paragraph</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Smart Chunking Settings -->
+                                            <div class="mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="useSmartChunking" checked>
+                                                    <label class="form-check-label" for="useSmartChunking">
+                                                        Enable Smart Text Chunking
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Intelligently split and merge text chunks for better translation quality</small>
+                                            </div>
+                                            
+                                            <div class="mb-3" id="chunkingSettings">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Max Chunk Size</label>
+                                                        <input type="number" class="form-control" id="maxChunkChars" value="1500" min="500" max="3000" step="100" title="Maximum characters per text chunk">
+                                                        <small class="text-muted">500-3000 chars</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Min Chunk Size</label>
+                                                        <input type="number" class="form-control" id="minChunkChars" value="50" min="10" max="200" step="10" title="Minimum characters per text chunk">
+                                                        <small class="text-muted">10-200 chars</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Batch Processing Settings -->
+                                            <div class="mb-3">
+                                                <label class="form-label">Batch Size</label>
+                                                <input type="number" class="form-control" id="batchSize" value="10" min="1" max="50" step="1" title="Number of text chunks to process in each batch">
+                                                <small class="text-muted">Dynamic batch sizing will be applied automatically</small>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Delay Between Requests (seconds)</label>
+                                                <input type="number" class="form-control" id="translationDelay" value="1.0" min="0" max="10" step="0.1" title="Delay between translation API requests">
+                                                <small class="text-muted">Helps avoid API rate limits</small>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <!-- Test Translation -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-vial"></i> Test Translation</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Test Text</label>
+                                            <textarea class="form-control" id="testText" rows="3" placeholder="Enter text to test translation"></textarea>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary w-100 mb-2" id="testTranslationBtn">
+                                            <i class="fas fa-play"></i> Test Translation
+                                        </button>
+                                        <div id="testResult" class="mt-3" style="display: none;">
+                                            <label class="form-label">Translation Result</label>
+                                            <div class="border p-2 bg-light" id="testTranslationResult"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- PDF Upload and Translation -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-file-pdf"></i> PDF Translation</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Upload PDF File</label>
+                                            <input type="file" class="form-control" id="pdfFile" accept=".pdf" title="Select PDF file to translate">
+                                            <small class="text-muted">Maximum file size: 50MB</small>
+                                        </div>
+                                        <button type="button" class="btn btn-success w-100 mb-2" id="translatePdfBtn">
+                                            <i class="fas fa-language"></i> Translate PDF
+                                        </button>
+                                        <div class="loading-translation mt-3 text-center" style="display: none;">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Translating...</span>
+                                            </div>
+                                            <div class="mt-2">Translating PDF...</div>
+                                            <div class="progress mt-2">
+                                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Translation Results -->
+                                <div class="card" id="translationResults" style="display: none;">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-download"></i> Translation Results</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="translationInfo"></div>
+                                        <div id="downloadLinks" class="mt-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Translation History -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-history"></i> Translation History</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="translationHistoryTable">
+                                        <thead>
+                                            <tr>
+                                                <th>File Name</th>
+                                                <th>Provider</th>
+                                                <th>Languages</th>
+                                                <th>Status</th>
+                                                <th>Processing Time</th>
+                                                <th>Timestamp</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted">No translation history</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End PDF Translation Panel -->
+                </div>
+                <!-- End Tab Content -->
+            </div>
+        </div>
+
+    <!-- Add Test Case Modal -->
+    <div class="modal fade" id="addCaseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Test Case</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" title="Close modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCaseForm">
+                        <div class="mb-3">
+                            <label class="form-label">Test ID</label>
+                            <input type="text" class="form-control" id="newCaseId" placeholder="Enter unique test case ID" title="Unique identifier for the test case" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Query</label>
+                            <textarea class="form-control" id="newCaseQuery" rows="3" placeholder="Enter the search query" title="The query text to test against the knowledge base" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Expected Answer</label>
+                            <textarea class="form-control" id="newCaseAnswer" rows="2" placeholder="Enter expected answer (optional)" title="Expected answer for comparison purposes"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <input type="text" class="form-control" id="newCaseCategory" placeholder="Enter category (optional)" title="Category or tag for organizing test cases">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveCaseBtn">Save Test Case</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/debug.js') }}"></script>
+</body>
+</html>

@@ -102,8 +102,15 @@ class WebInterface:
                     }
                 }
         
-        # Initialize Flask app
-        self.app = Flask(__name__)
+        # Initialize Flask app with correct template and static folders
+        import os
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        template_folder = os.path.join(project_root, 'templates')
+        static_folder = os.path.join(project_root, 'static')
+        
+        self.app = Flask(__name__, 
+                        template_folder=template_folder,
+                        static_folder=static_folder)
         CORS(self.app)
         
         # Register blueprints
@@ -136,6 +143,14 @@ class WebInterface:
             self.logger.info("Ideas API blueprint registered")
         except ImportError as e:
             self.logger.warning(f"Could not register ideas API blueprint: {e}")
+        
+        try:
+            from .websites_api import WebsitesAPI
+            websites_api = WebsitesAPI()
+            self.app.register_blueprint(websites_api.get_blueprint())
+            self.logger.info("Websites API blueprint registered")
+        except ImportError as e:
+            self.logger.warning(f"Could not register websites API blueprint: {e}")
     
     def _setup_routes(self):
         """Setup Flask routes."""
@@ -154,6 +169,11 @@ class WebInterface:
         def documents():
             """Document learning page."""
             return render_template('documents.html')
+        
+        @self.app.route('/websites')
+        def websites():
+            """Websites management page."""
+            return render_template('websites.html')
         
         @self.app.route('/api/config', methods=['GET', 'POST'])
         def config_api():
