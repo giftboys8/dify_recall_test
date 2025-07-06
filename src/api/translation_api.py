@@ -533,6 +533,91 @@ def test_translation():
         }), 500
 
 
+@translation_bp.route('/config', methods=['POST'])
+def save_translation_config():
+    """保存翻译配置"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '缺少配置数据'
+            }), 400
+        
+        # 验证必要的配置字段
+        required_fields = ['provider', 'source_language', 'target_language']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'缺少必要字段: {field}'
+                }), 400
+        
+        # 保存配置到文件
+        config_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'config')
+        os.makedirs(config_dir, exist_ok=True)
+        config_file = os.path.join(config_dir, 'translation_config.json')
+        
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"翻译配置已保存: {data.get('provider')}")
+        
+        return jsonify({
+            'success': True,
+            'message': '配置保存成功'
+        })
+    
+    except Exception as e:
+        logger.error(f"保存翻译配置失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@translation_bp.route('/config', methods=['GET'])
+def load_translation_config():
+    """加载翻译配置"""
+    try:
+        config_file = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'translation_config.json')
+        
+        if not os.path.exists(config_file):
+            # 返回默认配置
+            default_config = {
+                'provider': 'nllb',
+                'source_language': 'auto',
+                'target_language': 'zh-CN',
+                'output_format': 'docx',
+                'layout_option': 'preserve',
+                'use_smart_chunking': True,
+                'max_chunk_chars': 2000,
+                'min_chunk_chars': 500,
+                'batch_size': 5,
+                'translation_delay': 1000
+            }
+            return jsonify({
+                'success': True,
+                'data': default_config
+            })
+        
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        return jsonify({
+            'success': True,
+            'data': config_data
+        })
+    
+    except Exception as e:
+        logger.error(f"加载翻译配置失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 
 
 

@@ -26,7 +26,7 @@
             border-color: #764ba2;
             background-color: #f8f9fa;
         }
-        .upload-area.dragover {
+        .upload-area.drag-over {
             border-color: #28a745;
             background-color: #d4edda;
         }
@@ -204,7 +204,7 @@
                         </button>
                         <div id="testResult" class="mt-3" style="display: none;">
                             <label class="form-label">翻译结果</label>
-                            <div class="border p-2 bg-light rounded" id="testResultContent"></div>
+                            <div class="border p-2 bg-light rounded" id="testTranslationResult"></div>
                         </div>
                     </div>
                 </div>
@@ -310,175 +310,11 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
-        // Translation functionality
+        // Initialize the DifyTestApp when the page loads
         document.addEventListener('DOMContentLoaded', function() {
-            const uploadArea = document.getElementById('uploadArea');
-            const fileInput = document.getElementById('pdfFileInput');
-            const selectFileBtn = document.getElementById('selectFileBtn');
-            const progressContainer = document.querySelector('.progress-container');
-            const fileInfo = document.getElementById('fileInfo');
-            const resultCard = document.getElementById('resultCard');
-            
-            // File upload handling
-            selectFileBtn.addEventListener('click', () => fileInput.click());
-            
-            uploadArea.addEventListener('click', () => fileInput.click());
-            
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0 && files[0].type === 'application/pdf') {
-                    handleFileSelect(files[0]);
-                }
-            });
-            
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFileSelect(e.target.files[0]);
-                }
-            });
-            
-            function handleFileSelect(file) {
-                if (file.size > 50 * 1024 * 1024) {
-                    alert('文件大小不能超过 50MB');
-                    return;
-                }
-                
-                document.getElementById('fileName').textContent = file.name;
-                document.getElementById('fileSize').textContent = formatFileSize(file.size);
-                document.getElementById('uploadTime').textContent = new Date().toLocaleString();
-                
-                fileInfo.style.display = 'block';
-                uploadArea.style.display = 'none';
-            }
-            
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-            
-            // Translation settings
-            document.getElementById('translationSettingsForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                alert('翻译设置已保存');
-            });
-            
-            // Test translation
-            document.getElementById('testTranslationBtn').addEventListener('click', () => {
-                const testText = document.getElementById('testText').value;
-                if (!testText.trim()) {
-                    alert('请输入要测试的文本');
-                    return;
-                }
-                
-                // Simulate translation
-                document.getElementById('testResultContent').textContent = '这是模拟的翻译结果: ' + testText;
-                document.getElementById('testResult').style.display = 'block';
-            });
-            
-            // Start translation
-            document.getElementById('startTranslationBtn').addEventListener('click', () => {
-                progressContainer.style.display = 'block';
-                simulateTranslation();
-            });
-            
-            function simulateTranslation() {
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += Math.random() * 10;
-                    if (progress >= 100) {
-                        progress = 100;
-                        clearInterval(interval);
-                        showTranslationResult();
-                    }
-                    
-                    document.getElementById('uploadProgress').style.width = progress + '%';
-                    document.getElementById('progressText').textContent = Math.round(progress) + '%';
-                    document.getElementById('progressStatus').textContent = progress < 100 ? '正在翻译...' : '翻译完成';
-                }, 500);
-            }
-            
-            function showTranslationResult() {
-                const result = `
-                    <h3>翻译结果</h3>
-                    <p>这是一个示例翻译结果。在实际应用中，这里会显示PDF文档的翻译内容。</p>
-                    <h4>第一章 介绍</h4>
-                    <p>本文档介绍了知识管理平台的PDF翻译功能...</p>
-                    <h4>第二章 功能特性</h4>
-                    <p>PDF翻译功能支持多种格式输出，包括Markdown、HTML和纯文本...</p>
-                `;
-                
-                document.getElementById('translationResult').innerHTML = result;
-                resultCard.style.display = 'block';
-                
-                // Add to history
-                addToHistory(document.getElementById('fileName').textContent, '成功');
-            }
-            
-            function addToHistory(fileName, status) {
-                const tbody = document.querySelector('#historyTable tbody');
-                if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
-                    tbody.innerHTML = '';
-                }
-                
-                const row = tbody.insertRow(0);
-                row.innerHTML = `
-                    <td>${fileName}</td>
-                    <td><span class="status-${status === '成功' ? 'success' : 'error'}">${status}</span></td>
-                    <td>${new Date().toLocaleString()}</td>
-                `;
-            }
-            
-            // Copy result
-            document.getElementById('copyResultBtn').addEventListener('click', () => {
-                const result = document.getElementById('translationResult').textContent;
-                navigator.clipboard.writeText(result).then(() => {
-                    alert('翻译结果已复制到剪贴板');
-                });
-            });
-            
-            // Download result
-            document.getElementById('downloadResultBtn').addEventListener('click', () => {
-                const result = document.getElementById('translationResult').innerHTML;
-                const blob = new Blob([result], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'translation_result.html';
-                a.click();
-                URL.revokeObjectURL(url);
-            });
-            
-            // Cancel upload
-            document.getElementById('cancelUploadBtn').addEventListener('click', () => {
-                fileInfo.style.display = 'none';
-                uploadArea.style.display = 'block';
-                progressContainer.style.display = 'none';
-                resultCard.style.display = 'none';
-                fileInput.value = '';
-            });
-            
-            // Clear history
-            document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-                if (confirm('确定要清空翻译历史吗？')) {
-                    const tbody = document.querySelector('#historyTable tbody');
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">暂无翻译历史</td></tr>';
-                }
-            });
+            window.app = new DifyTestApp();
         });
     </script>
 </body>

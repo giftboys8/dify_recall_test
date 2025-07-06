@@ -13,63 +13,122 @@ class DifyTestApp {
         this.loadConfig();
         this.loadTestCases();
         this.loadResults();
+        this.loadTranslationConfig();
     }
 
     bindEvents() {
-        // Configuration form
-        document.getElementById('configForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.saveConfig();
-        });
+        // Configuration form (only for recall testing page)
+        const configForm = document.getElementById('configForm');
+        if (configForm) {
+            configForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveConfig();
+            });
+        }
 
-        // Test case management
-        document.getElementById('loadCsvBtn').addEventListener('click', () => this.loadCsvFile());
-        document.getElementById('clearCasesBtn').addEventListener('click', () => this.clearTestCases());
-        document.getElementById('addCaseBtn').addEventListener('click', () => this.showAddCaseModal());
-        document.getElementById('saveCaseBtn').addEventListener('click', () => this.saveTestCase());
+        // Test case management (only for recall testing page)
+        const loadCsvBtn = document.getElementById('loadCsvBtn');
+        if (loadCsvBtn) {
+            loadCsvBtn.addEventListener('click', () => this.loadCsvFile());
+        }
+        
+        const clearCasesBtn = document.getElementById('clearCasesBtn');
+        if (clearCasesBtn) {
+            clearCasesBtn.addEventListener('click', () => this.clearTestCases());
+        }
+        
+        const addCaseBtn = document.getElementById('addCaseBtn');
+        if (addCaseBtn) {
+            addCaseBtn.addEventListener('click', () => this.showAddCaseModal());
+        }
+        
+        const saveCaseBtn = document.getElementById('saveCaseBtn');
+        if (saveCaseBtn) {
+            saveCaseBtn.addEventListener('click', () => this.saveTestCase());
+        }
 
-        // Test execution
-        document.getElementById('runTestBtn').addEventListener('click', () => this.runTests());
-        document.getElementById('clearResultsBtn').addEventListener('click', () => this.clearResults());
+        // Test execution (only for recall testing page)
+        const runTestBtn = document.getElementById('runTestBtn');
+        if (runTestBtn) {
+            runTestBtn.addEventListener('click', () => this.runTests());
+        }
+        
+        const clearResultsBtn = document.getElementById('clearResultsBtn');
+        if (clearResultsBtn) {
+            clearResultsBtn.addEventListener('click', () => this.clearResults());
+        }
 
-        // Export functions
-        document.getElementById('exportCsvBtn').addEventListener('click', () => this.exportResults('csv'));
-        document.getElementById('exportJsonBtn').addEventListener('click', () => this.exportResults('json'));
+        // Export functions (only for recall testing page)
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', () => this.exportResults('csv'));
+        }
         
-        // Advanced settings event listeners
-        document.getElementById('scoreThresholdEnabled').addEventListener('change', () => {
-            this.updateAdvancedSettingsUI();
-        });
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        if (exportJsonBtn) {
+            exportJsonBtn.addEventListener('click', () => this.exportResults('json'));
+        }
         
-        document.getElementById('rerankingEnabled').addEventListener('change', () => {
-            this.updateAdvancedSettingsUI();
-        });
+        // Advanced settings event listeners (only for recall testing page)
+        const scoreThresholdEnabled = document.getElementById('scoreThresholdEnabled');
+        if (scoreThresholdEnabled) {
+            scoreThresholdEnabled.addEventListener('change', () => {
+                this.updateAdvancedSettingsUI();
+            });
+        }
         
-        document.getElementById('rerankingProvider').addEventListener('change', (e) => {
-            const provider = e.target.value;
-            const modelInput = document.getElementById('rerankingModel');
-            if (provider === 'jina') {
-                modelInput.value = 'jina-reranker-v2-base-multilingual';
-            } else {
-                modelInput.value = '';
-            }
-        });
+        const rerankingEnabled = document.getElementById('rerankingEnabled');
+        if (rerankingEnabled) {
+            rerankingEnabled.addEventListener('change', () => {
+                this.updateAdvancedSettingsUI();
+            });
+        }
+        
+        const rerankingProvider = document.getElementById('rerankingProvider');
+        if (rerankingProvider) {
+            rerankingProvider.addEventListener('change', (e) => {
+                const provider = e.target.value;
+                const modelInput = document.getElementById('rerankingModel');
+                if (modelInput) {
+                    if (provider === 'jina') {
+                        modelInput.value = 'jina-reranker-v2-base-multilingual';
+                    } else {
+                        modelInput.value = '';
+                    }
+                }
+            });
+        }
         
         // PDF Translation events
         this.bindTranslationEvents();
         
+        // Translation settings form (only for translation page)
+        const translationSettingsForm = document.getElementById('translationSettingsForm');
+        if (translationSettingsForm) {
+            translationSettingsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveTranslationConfig();
+            });
+        }
+        
         // Tab switching events
         this.bindTabEvents();
         
-        // Translation provider change event
-        document.getElementById('translationProvider').addEventListener('change', () => {
-            this.updateTranslationProviderUI();
-        });
+        // Translation provider change event (only for translation page)
+        const translationProvider = document.getElementById('translationProvider');
+        if (translationProvider) {
+            translationProvider.addEventListener('change', () => {
+                this.updateTranslationProviderUI();
+            });
+        }
         
-        // Smart chunking toggle event
-        document.getElementById('useSmartChunking').addEventListener('change', () => {
-            this.updateChunkingSettingsUI();
-        });
+        // Smart chunking toggle event (only for translation page)
+        const useSmartChunking = document.getElementById('useSmartChunking');
+        if (useSmartChunking) {
+            useSmartChunking.addEventListener('change', () => {
+                this.updateChunkingSettingsUI();
+            });
+        }
     }
 
     async loadConfig() {
@@ -86,35 +145,53 @@ class DifyTestApp {
 
     populateConfigForm() {
         const api = this.config.api || {};
-        document.getElementById('apiBaseUrl').value = api.base_url || '';
-        document.getElementById('datasetId').value = api.dataset_id || '';
+        
+        const apiBaseUrl = document.getElementById('apiBaseUrl');
+        if (apiBaseUrl) apiBaseUrl.value = api.base_url || '';
+        
+        const datasetId = document.getElementById('datasetId');
+        if (datasetId) datasetId.value = api.dataset_id || '';
         
         const testing = this.config.testing || {};
-        document.getElementById('topK').value = testing.top_k || 10;
+        const topK = document.getElementById('topK');
+        if (topK) topK.value = testing.top_k || 10;
         
         // Advanced settings
         const testSettings = this.config.test_settings || {};
         
         // Search method
-        document.getElementById('searchMethod').value = testSettings.search_method || 'semantic_search';
+        const searchMethod = document.getElementById('searchMethod');
+        if (searchMethod) searchMethod.value = testSettings.search_method || 'semantic_search';
         
         // Reranking settings
-        document.getElementById('rerankingEnabled').checked = testSettings.reranking_enabled !== false;
+        const rerankingEnabled = document.getElementById('rerankingEnabled');
+        if (rerankingEnabled) rerankingEnabled.checked = testSettings.reranking_enabled !== false;
+        
         const rerankingModel = testSettings.reranking_model || {};
-        document.getElementById('rerankingProvider').value = rerankingModel.provider || '';
-        document.getElementById('rerankingModel').value = rerankingModel.model || (rerankingModel.provider === 'jina' ? 'jina-reranker-v2-base-multilingual' : '');
+        const rerankingProvider = document.getElementById('rerankingProvider');
+        if (rerankingProvider) rerankingProvider.value = rerankingModel.provider || '';
+        
+        const rerankingModelEl = document.getElementById('rerankingModel');
+        if (rerankingModelEl) rerankingModelEl.value = rerankingModel.model || (rerankingModel.provider === 'jina' ? 'jina-reranker-v2-base-multilingual' : '');
         
         // Embedding settings
         const embeddingModel = testSettings.embedding_model || {};
-        document.getElementById('embeddingProvider').value = embeddingModel.provider || 'zhipuai';
-        document.getElementById('embeddingModel').value = embeddingModel.model || 'embedding-3';
+        const embeddingProvider = document.getElementById('embeddingProvider');
+        if (embeddingProvider) embeddingProvider.value = embeddingModel.provider || 'zhipuai';
+        
+        const embeddingModelEl = document.getElementById('embeddingModel');
+        if (embeddingModelEl) embeddingModelEl.value = embeddingModel.model || 'embedding-3';
         
         // Score threshold
-        document.getElementById('scoreThresholdEnabled').checked = testSettings.score_threshold_enabled || false;
-        document.getElementById('scoreThreshold').value = testSettings.score_threshold || 0.55;
+        const scoreThresholdEnabled = document.getElementById('scoreThresholdEnabled');
+        if (scoreThresholdEnabled) scoreThresholdEnabled.checked = testSettings.score_threshold_enabled || false;
+        
+        const scoreThreshold = document.getElementById('scoreThreshold');
+        if (scoreThreshold) scoreThreshold.value = testSettings.score_threshold || 0.55;
         
         // Delay
-        document.getElementById('delayBetweenRequests').value = testSettings.delay_between_requests || 1.0;
+        const delayBetweenRequests = document.getElementById('delayBetweenRequests');
+        if (delayBetweenRequests) delayBetweenRequests.value = testSettings.delay_between_requests || 1.0;
         
         // Update UI based on settings
         this.updateAdvancedSettingsUI();
@@ -122,44 +199,67 @@ class DifyTestApp {
     
     updateAdvancedSettingsUI() {
         // Show/hide score threshold settings
-        const scoreThresholdEnabled = document.getElementById('scoreThresholdEnabled').checked;
+        const scoreThresholdEnabledEl = document.getElementById('scoreThresholdEnabled');
         const scoreThresholdSettings = document.getElementById('scoreThresholdSettings');
-        scoreThresholdSettings.style.display = scoreThresholdEnabled ? 'block' : 'none';
+        
+        if (scoreThresholdEnabledEl && scoreThresholdSettings) {
+            const scoreThresholdEnabled = scoreThresholdEnabledEl.checked;
+            scoreThresholdSettings.style.display = scoreThresholdEnabled ? 'block' : 'none';
+        }
         
         // Show/hide reranking settings
-        const rerankingEnabled = document.getElementById('rerankingEnabled').checked;
+        const rerankingEnabledEl = document.getElementById('rerankingEnabled');
         const rerankingSettings = document.getElementById('rerankingSettings');
-        rerankingSettings.style.display = rerankingEnabled ? 'block' : 'none';
+        
+        if (rerankingEnabledEl && rerankingSettings) {
+            const rerankingEnabled = rerankingEnabledEl.checked;
+            rerankingSettings.style.display = rerankingEnabled ? 'block' : 'none';
+        }
     }
 
     async saveConfig() {
+        // Get all DOM elements with null checks
+        const apiBaseUrl = document.getElementById('apiBaseUrl');
+        const apiKey = document.getElementById('apiKey');
+        const datasetId = document.getElementById('datasetId');
+        const topK = document.getElementById('topK');
+        const delayBetweenRequests = document.getElementById('delayBetweenRequests');
+        const scoreThresholdEnabled = document.getElementById('scoreThresholdEnabled');
+        const scoreThreshold = document.getElementById('scoreThreshold');
+        const rerankingEnabled = document.getElementById('rerankingEnabled');
+        const searchMethod = document.getElementById('searchMethod');
+        const rerankingProvider = document.getElementById('rerankingProvider');
+        const rerankingModel = document.getElementById('rerankingModel');
+        const embeddingProvider = document.getElementById('embeddingProvider');
+        const embeddingModelEl = document.getElementById('embeddingModel');
+        
         const config = {
             api: {
-                base_url: document.getElementById('apiBaseUrl').value,
-                api_key: document.getElementById('apiKey').value,
-                dataset_id: document.getElementById('datasetId').value
+                base_url: apiBaseUrl ? apiBaseUrl.value : '',
+                api_key: apiKey ? apiKey.value : '',
+                dataset_id: datasetId ? datasetId.value : ''
             },
             testing: {
-                top_k: parseInt(document.getElementById('topK').value),
-                delay_between_requests: parseFloat(document.getElementById('delayBetweenRequests').value),
-                score_threshold_enabled: document.getElementById('scoreThresholdEnabled').checked,
-                score_threshold: parseFloat(document.getElementById('scoreThreshold').value),
-                reranking_enabled: document.getElementById('rerankingEnabled').checked
+                top_k: topK ? parseInt(topK.value) : 10,
+                delay_between_requests: delayBetweenRequests ? parseFloat(delayBetweenRequests.value) : 1.0,
+                score_threshold_enabled: scoreThresholdEnabled ? scoreThresholdEnabled.checked : false,
+                score_threshold: scoreThreshold ? parseFloat(scoreThreshold.value) : 0.55,
+                reranking_enabled: rerankingEnabled ? rerankingEnabled.checked : false
             },
             test_settings: {
-                search_method: document.getElementById('searchMethod').value,
-                reranking_enabled: document.getElementById('rerankingEnabled').checked,
+                search_method: searchMethod ? searchMethod.value : 'semantic_search',
+                reranking_enabled: rerankingEnabled ? rerankingEnabled.checked : false,
                 reranking_model: {
-                    provider: document.getElementById('rerankingProvider').value,
-                    model: document.getElementById('rerankingModel').value
+                    provider: rerankingProvider ? rerankingProvider.value : '',
+                    model: rerankingModel ? rerankingModel.value : ''
                 },
                 embedding_model: {
-                    provider: document.getElementById('embeddingProvider').value,
-                    model: document.getElementById('embeddingModel').value
+                    provider: embeddingProvider ? embeddingProvider.value : 'zhipuai',
+                    model: embeddingModelEl ? embeddingModelEl.value : 'embedding-3'
                 },
-                score_threshold_enabled: document.getElementById('scoreThresholdEnabled').checked,
-                score_threshold: parseFloat(document.getElementById('scoreThreshold').value),
-                delay_between_requests: parseFloat(document.getElementById('delayBetweenRequests').value)
+                score_threshold_enabled: scoreThresholdEnabled ? scoreThresholdEnabled.checked : false,
+                score_threshold: scoreThreshold ? parseFloat(scoreThreshold.value) : 0.55,
+                delay_between_requests: delayBetweenRequests ? parseFloat(delayBetweenRequests.value) : 1.0
             }
         };
 
@@ -184,8 +284,145 @@ class DifyTestApp {
         }
     }
 
+    async saveTranslationConfig() {
+        const config = this.getTranslationConfig();
+        if (!config) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/translation/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            });
+
+            if (response.ok) {
+                this.showAlert('Translation configuration saved successfully!', 'success');
+                // Store config locally for future use
+                localStorage.setItem('translationConfig', JSON.stringify(config));
+            } else {
+                const error = await response.json();
+                this.showAlert(`Error saving translation configuration: ${error.error}`, 'danger');
+            }
+        } catch (error) {
+            this.showAlert(`Error saving translation configuration: ${error.message}`, 'danger');
+        }
+    }
+
+    async loadTranslationConfig() {
+        try {
+            // First try to load from backend
+            const response = await fetch('/api/translation/config');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    this.populateTranslationConfigForm(result.data);
+                    // Also save to localStorage as backup
+                    localStorage.setItem('translationConfig', JSON.stringify(result.data));
+                    return;
+                }
+            }
+            
+            // If backend fails, try localStorage
+            const savedConfig = localStorage.getItem('translationConfig');
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig);
+                this.populateTranslationConfigForm(config);
+            }
+        } catch (error) {
+            console.error('Error loading translation config:', error);
+            // Try localStorage as fallback
+            try {
+                const savedConfig = localStorage.getItem('translationConfig');
+                if (savedConfig) {
+                    const config = JSON.parse(savedConfig);
+                    this.populateTranslationConfigForm(config);
+                }
+            } catch (localError) {
+                console.error('Error loading from localStorage:', localError);
+            }
+        }
+    }
+
+    populateTranslationConfigForm(config) {
+        // Populate translation provider
+        const providerElement = document.getElementById('translationProvider');
+        if (providerElement && config.provider) {
+            providerElement.value = config.provider;
+        }
+
+        // Populate API key
+        const apiKeyElement = document.getElementById('translationApiKey');
+        if (apiKeyElement && config.api_key) {
+            apiKeyElement.value = config.api_key;
+        }
+
+        // Populate languages
+        const sourceLanguageElement = document.getElementById('sourceLanguage');
+        if (sourceLanguageElement && config.source_language) {
+            sourceLanguageElement.value = config.source_language;
+        }
+
+        const targetLanguageElement = document.getElementById('targetLanguage');
+        if (targetLanguageElement && config.target_language) {
+            targetLanguageElement.value = config.target_language;
+        }
+
+        // Populate output format
+        const outputFormatElement = document.getElementById('outputFormat');
+        if (outputFormatElement && config.output_format) {
+            outputFormatElement.value = config.output_format;
+        }
+
+        // Populate layout option
+        const layoutOptionElement = document.getElementById('layoutOption');
+        if (layoutOptionElement && config.layout) {
+            layoutOptionElement.value = config.layout;
+        }
+
+        // Populate smart chunking settings
+        const useSmartChunkingElement = document.getElementById('useSmartChunking');
+        if (useSmartChunkingElement && config.use_smart_chunking !== undefined) {
+            useSmartChunkingElement.checked = config.use_smart_chunking;
+        }
+
+        const maxChunkCharsElement = document.getElementById('maxChunkChars');
+        if (maxChunkCharsElement && config.max_chunk_chars) {
+            maxChunkCharsElement.value = config.max_chunk_chars;
+        }
+
+        const minChunkCharsElement = document.getElementById('minChunkChars');
+        if (minChunkCharsElement && config.min_chunk_chars) {
+            minChunkCharsElement.value = config.min_chunk_chars;
+        }
+
+        // Populate batch processing settings
+        const batchSizeElement = document.getElementById('batchSize');
+        if (batchSizeElement && config.batch_size) {
+            batchSizeElement.value = config.batch_size;
+        }
+
+        const delayElement = document.getElementById('translationDelay');
+        if (delayElement && config.delay) {
+            delayElement.value = config.delay;
+        }
+
+        // Update UI states
+        this.updateTranslationProviderUI();
+        this.updateChunkingSettingsUI();
+    }
+
     async loadCsvFile() {
         const fileInput = document.getElementById('csvFile');
+        
+        if (!fileInput) {
+            this.showAlert('File input not found on this page.', 'warning');
+            return;
+        }
+        
         const file = fileInput.files[0];
         
         if (!file) {
@@ -242,6 +479,14 @@ class DifyTestApp {
     updateTestCasesTable() {
         const tbody = document.querySelector('#testCasesTable tbody');
         
+        if (!tbody) {
+            // Only show warning if we're on a page that should have this table
+            if (window.location.pathname.includes('recall') || window.location.pathname === '/') {
+                console.warn('Test cases table not found on this page');
+            }
+            return;
+        }
+        
         if (this.testCases.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No test cases loaded</td></tr>';
             return;
@@ -258,7 +503,10 @@ class DifyTestApp {
     }
 
     updateTestCaseCount() {
-        document.getElementById('testCaseCount').textContent = this.testCases.length;
+        const testCaseCount = document.getElementById('testCaseCount');
+        if (testCaseCount) {
+            testCaseCount.textContent = this.testCases.length;
+        }
     }
 
     async clearTestCases() {
@@ -283,16 +531,24 @@ class DifyTestApp {
     }
 
     showAddCaseModal() {
-        const modal = new bootstrap.Modal(document.getElementById('addCaseModal'));
-        modal.show();
+        const addCaseModal = document.getElementById('addCaseModal');
+        if (addCaseModal) {
+            const modal = new bootstrap.Modal(addCaseModal);
+            modal.show();
+        }
     }
 
     async saveTestCase() {
+        const newCaseId = document.getElementById('newCaseId');
+        const newCaseQuery = document.getElementById('newCaseQuery');
+        const newCaseAnswer = document.getElementById('newCaseAnswer');
+        const newCaseCategory = document.getElementById('newCaseCategory');
+        
         const testCase = {
-            id: document.getElementById('newCaseId').value,
-            query: document.getElementById('newCaseQuery').value,
-            expected_answer: document.getElementById('newCaseAnswer').value,
-            category: document.getElementById('newCaseCategory').value
+            id: newCaseId ? newCaseId.value : '',
+            query: newCaseQuery ? newCaseQuery.value : '',
+            expected_answer: newCaseAnswer ? newCaseAnswer.value : '',
+            category: newCaseCategory ? newCaseCategory.value : ''
         };
 
         if (!testCase.id || !testCase.query) {
@@ -315,9 +571,14 @@ class DifyTestApp {
                 this.loadTestCases();
                 
                 // Clear form and close modal
-                document.getElementById('addCaseForm').reset();
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addCaseModal'));
-                modal.hide();
+                const addCaseForm = document.getElementById('addCaseForm');
+                if (addCaseForm) addCaseForm.reset();
+                
+                const addCaseModal = document.getElementById('addCaseModal');
+                if (addCaseModal) {
+                    const modal = bootstrap.Modal.getInstance(addCaseModal);
+                    if (modal) modal.hide();
+                }
             } else {
                 const error = await response.json();
                 this.showAlert(`Error saving test case: ${error.error}`, 'danger');
@@ -342,8 +603,8 @@ class DifyTestApp {
         const runBtn = document.getElementById('runTestBtn');
         const loading = document.querySelector('.loading');
         
-        runBtn.disabled = true;
-        loading.style.display = 'block';
+        if (runBtn) runBtn.disabled = true;
+        if (loading) loading.style.display = 'block';
 
         try {
             const response = await fetch('/api/run-test', {
@@ -361,8 +622,8 @@ class DifyTestApp {
         } catch (error) {
             this.showAlert(`Error running tests: ${error.message}`, 'danger');
         } finally {
-            runBtn.disabled = false;
-            loading.style.display = 'none';
+            if (runBtn) runBtn.disabled = false;
+            if (loading) loading.style.display = 'none';
         }
     }
 
@@ -382,6 +643,14 @@ class DifyTestApp {
 
     updateResultsTable() {
         const tbody = document.querySelector('#resultsTable tbody');
+        
+        if (!tbody) {
+            // Only show warning if we're on a page that should have this table
+            if (window.location.pathname.includes('recall') || window.location.pathname === '/') {
+                console.warn('Results table not found on this page');
+            }
+            return;
+        }
         
         if (this.testResults.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No results available</td></tr>';
@@ -407,10 +676,23 @@ class DifyTestApp {
     updateSummaryCards(summary) {
         if (!summary) return;
         
-        document.getElementById('totalTests').textContent = summary.total || 0;
-        document.getElementById('successfulTests').textContent = summary.successful || 0;
-        document.getElementById('failedTests').textContent = summary.failed || 0;
-        document.getElementById('successRate').textContent = `${(summary.success_rate || 0).toFixed(1)}%`;
+        const totalTests = document.getElementById('totalTests');
+        const successfulTests = document.getElementById('successfulTests');
+        const failedTests = document.getElementById('failedTests');
+        const successRate = document.getElementById('successRate');
+        
+        if (!totalTests || !successfulTests || !failedTests || !successRate) {
+            // Only show warning if we're on a page that should have these elements
+            if (window.location.pathname.includes('recall') || window.location.pathname === '/') {
+                console.warn('Summary card elements not found on this page');
+            }
+            return;
+        }
+        
+        totalTests.textContent = summary.total || 0;
+        successfulTests.textContent = summary.successful || 0;
+        failedTests.textContent = summary.failed || 0;
+        successRate.textContent = `${(summary.success_rate || 0).toFixed(1)}%`;
     }
 
     async clearResults() {
@@ -504,9 +786,55 @@ class DifyTestApp {
         }
         
         // PDF translation
-        const translatePdfBtn = document.getElementById('translatePdfBtn');
+        const translatePdfBtn = document.getElementById('startTranslationBtn');
         if (translatePdfBtn) {
             translatePdfBtn.addEventListener('click', () => this.translatePdf());
+        }
+        
+        // File upload events
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const pdfFileInput = document.getElementById('pdfFileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        
+        if (selectFileBtn && pdfFileInput) {
+            selectFileBtn.addEventListener('click', () => {
+                pdfFileInput.click();
+            });
+            
+            pdfFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.handleFileSelection(e.target.files[0]);
+                }
+            });
+        }
+        
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type === 'application/pdf') {
+                    this.handleFileSelection(files[0]);
+                }
+            });
+        }
+        
+        // Start translation button event is already bound above as translatePdfBtn
+        
+        // Cancel upload button
+        const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+        if (cancelUploadBtn) {
+            cancelUploadBtn.addEventListener('click', () => this.cancelUpload());
         }
         
         // Initialize UI states
@@ -517,7 +845,13 @@ class DifyTestApp {
 
     
     async testTranslation() {
-        const testText = document.getElementById('testText').value.trim();
+        const testTextElement = document.getElementById('testText');
+        if (!testTextElement) {
+            this.showAlert('Test text input not found.', 'danger');
+            return;
+        }
+        
+        const testText = testTextElement.value.trim();
         if (!testText) {
             this.showAlert('Please enter text to test translation.', 'warning');
             return;
@@ -527,6 +861,11 @@ class DifyTestApp {
         if (!config) return;
         
         const testBtn = document.getElementById('testTranslationBtn');
+        if (!testBtn) {
+            this.showAlert('Test button not found.', 'danger');
+            return;
+        }
+        
         const originalText = testBtn.innerHTML;
         testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
         testBtn.disabled = true;
@@ -545,9 +884,19 @@ class DifyTestApp {
             
             if (response.ok) {
                 const result = await response.json();
-                document.getElementById('testTranslationResult').textContent = result.translated_text;
-                document.getElementById('testResult').style.display = 'block';
-                this.showAlert('Translation test completed!', 'success');
+                const translatedText = result.data ? result.data.translated_text : result.translated_text;
+                
+                const testTranslationResult = document.getElementById('testTranslationResult');
+                const testResult = document.getElementById('testResult');
+                
+                if (testTranslationResult && testResult) {
+                    testTranslationResult.textContent = translatedText;
+                    testResult.style.display = 'block';
+                    this.showAlert('Translation test completed!', 'success');
+                } else {
+                    console.warn('Test result display elements not found');
+                    this.showAlert('Translation completed, but unable to display result.', 'warning');
+                }
             } else {
                 const error = await response.json();
                 this.showAlert(`Translation test failed: ${error.error}`, 'danger');
@@ -561,16 +910,16 @@ class DifyTestApp {
     }
     
     async translatePdf() {
-        const fileInput = document.getElementById('pdfFile');
-        const file = fileInput.files[0];
+        // Use the selected file from handleFileSelection
+        const file = this.selectedFile;
         
         if (!file) {
-            this.showAlert('Please select a PDF file first.', 'warning');
+            this.showAlert('请先选择PDF文件', 'warning');
             return;
         }
         
         if (file.size > 50 * 1024 * 1024) {
-            this.showAlert('File size exceeds 50MB limit.', 'danger');
+            this.showAlert('文件大小超过50MB限制', 'danger');
             return;
         }
         
@@ -591,12 +940,19 @@ class DifyTestApp {
             formData.append('api_key', config.api_key);
         }
         
-        const translateBtn = document.getElementById('translatePdfBtn');
+        const translateBtn = document.getElementById('startTranslationBtn');
         const loadingDiv = document.querySelector('.loading-translation');
         const progressBar = document.querySelector('.progress-bar');
         
+        if (!translateBtn) {
+            this.showAlert('翻译按钮未找到', 'danger');
+            return;
+        }
+        
         translateBtn.disabled = true;
-        loadingDiv.style.display = 'block';
+        if (loadingDiv) {
+            loadingDiv.style.display = 'block';
+        }
         
         try {
             const response = await fetch('/api/translation/translate', {
@@ -617,26 +973,49 @@ class DifyTestApp {
             this.showAlert(`Translation failed: ${error.message}`, 'danger');
         } finally {
             translateBtn.disabled = false;
-            loadingDiv.style.display = 'none';
-            progressBar.style.width = '0%';
+            if (loadingDiv) {
+                loadingDiv.style.display = 'none';
+            }
+            if (progressBar) {
+                progressBar.style.width = '0%';
+            }
         }
     }
     
     getTranslationConfig() {
-        const provider = document.getElementById('translationProvider').value;
-        const sourceLanguage = document.getElementById('sourceLanguage').value;
-        const targetLanguage = document.getElementById('targetLanguage').value;
-        const outputFormat = document.getElementById('outputFormat').value;
-        const layoutOption = document.getElementById('layoutOption').value;
+        const providerElement = document.getElementById('translationProvider');
+        const sourceLanguageElement = document.getElementById('sourceLanguage');
+        const targetLanguageElement = document.getElementById('targetLanguage');
+        const outputFormatElement = document.getElementById('outputFormat');
+        const layoutOptionElement = document.getElementById('layoutOption');
+        
+        // Check if required elements exist
+        if (!providerElement || !sourceLanguageElement || !targetLanguageElement || !outputFormatElement || !layoutOptionElement) {
+            this.showAlert('Translation configuration elements not found.', 'danger');
+            return null;
+        }
+        
+        const provider = providerElement.value;
+        const sourceLanguage = sourceLanguageElement.value;
+        const targetLanguage = targetLanguageElement.value;
+        const outputFormat = outputFormatElement.value;
+        const layoutOption = layoutOptionElement.value;
         
         // Smart chunking settings
-        const useSmartChunking = document.getElementById('useSmartChunking').checked;
-        const maxChunkChars = parseInt(document.getElementById('maxChunkChars').value) || 1500;
-        const minChunkChars = parseInt(document.getElementById('minChunkChars').value) || 50;
+        const useSmartChunkingElement = document.getElementById('useSmartChunking');
+        const maxChunkCharsElement = document.getElementById('maxChunkChars');
+        const minChunkCharsElement = document.getElementById('minChunkChars');
+        
+        const useSmartChunking = useSmartChunkingElement ? useSmartChunkingElement.checked : true;
+        const maxChunkChars = maxChunkCharsElement ? parseInt(maxChunkCharsElement.value) || 1500 : 1500;
+        const minChunkChars = minChunkCharsElement ? parseInt(minChunkCharsElement.value) || 50 : 50;
         
         // Batch processing settings
-        const batchSize = parseInt(document.getElementById('batchSize').value) || 10;
-        const delay = parseFloat(document.getElementById('translationDelay').value) || 1.0;
+        const batchSizeElement = document.getElementById('batchSize');
+        const delayElement = document.getElementById('translationDelay');
+        
+        const batchSize = batchSizeElement ? parseInt(batchSizeElement.value) || 10 : 10;
+        const delay = delayElement ? parseFloat(delayElement.value) || 1.0 : 1.0;
         
         if (sourceLanguage === targetLanguage) {
             this.showAlert('Source and target languages cannot be the same.', 'warning');
@@ -657,7 +1036,13 @@ class DifyTestApp {
         };
         
         if (['openai', 'deepseek', 'deepseek-reasoner'].includes(provider)) {
-            const apiKey = document.getElementById('translationApiKey').value.trim();
+            const apiKeyElement = document.getElementById('translationApiKey');
+            if (!apiKeyElement) {
+                this.showAlert('API key input field not found.', 'danger');
+                return null;
+            }
+            
+            const apiKey = apiKeyElement.value.trim();
             if (!apiKey) {
                 const providerName = provider === 'openai' ? 'OpenAI' : 'DeepSeek';
                 this.showAlert(`Please enter ${providerName} API key.`, 'warning');
@@ -669,15 +1054,94 @@ class DifyTestApp {
         return config;
     }
     
+    handleFileSelection(file) {
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            this.showAlert('请选择PDF文件', 'warning');
+            return;
+        }
+        
+        // Validate file size (50MB limit)
+        if (file.size > 50 * 1024 * 1024) {
+            this.showAlert('文件大小超过50MB限制', 'danger');
+            return;
+        }
+        
+        // Store the selected file
+        this.selectedFile = file;
+        
+        // Update UI to show file info
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const uploadTime = document.getElementById('uploadTime');
+        
+        if (fileInfo && fileName && fileSize && uploadTime) {
+            fileName.textContent = file.name;
+            fileSize.textContent = this.formatFileSize(file.size);
+            uploadTime.textContent = new Date().toLocaleString();
+            fileInfo.style.display = 'block';
+        }
+        
+        // Hide upload area and show file info
+        const uploadArea = document.getElementById('uploadArea');
+        if (uploadArea) {
+            uploadArea.style.display = 'none';
+        }
+        
+        this.showAlert('文件选择成功，点击"开始翻译"按钮进行翻译', 'success');
+    }
+    
+    cancelUpload() {
+        // Clear selected file
+        this.selectedFile = null;
+        
+        // Reset file input
+        const pdfFileInput = document.getElementById('pdfFileInput');
+        if (pdfFileInput) {
+            pdfFileInput.value = '';
+        }
+        
+        // Hide file info and show upload area
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadArea = document.getElementById('uploadArea');
+        
+        if (fileInfo) {
+            fileInfo.style.display = 'none';
+        }
+        
+        if (uploadArea) {
+            uploadArea.style.display = 'block';
+        }
+        
+        this.showAlert('已取消文件上传', 'info');
+    }
+    
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
     updateTranslationProviderUI() {
-        const provider = document.getElementById('translationProvider').value;
+        const providerElement = document.getElementById('translationProvider');
         const apiKeyInput = document.getElementById('translationApiKey');
+        
+        if (!providerElement || !apiKeyInput) {
+            return; // Elements don't exist on this page
+        }
+        
+        const provider = providerElement.value;
         const apiKeyHelp = apiKeyInput.nextElementSibling;
         
         if (provider === 'nllb') {
             apiKeyInput.disabled = true;
             apiKeyInput.value = '';
-            apiKeyHelp.textContent = 'NLLB本地模型无需API Key';
+            if (apiKeyHelp) {
+                apiKeyHelp.textContent = 'NLLB本地模型无需API Key';
+            }
         } else {
             apiKeyInput.disabled = false;
             const providerName = {
@@ -685,20 +1149,33 @@ class DifyTestApp {
                 'deepseek': 'DeepSeek',
                 'deepseek-reasoner': 'DeepSeek Reasoner'
             }[provider] || provider;
-            apiKeyHelp.textContent = `请输入${providerName} API Key`;
+            if (apiKeyHelp) {
+                apiKeyHelp.textContent = `请输入${providerName} API Key`;
+            }
         }
     }
     
     updateChunkingSettingsUI() {
-        const useSmartChunking = document.getElementById('useSmartChunking').checked;
+        const useSmartChunking = document.getElementById('useSmartChunking');
         const chunkingSettings = document.getElementById('chunkingSettings');
-        chunkingSettings.style.display = useSmartChunking ? 'block' : 'none';
+        
+        if (!useSmartChunking || !chunkingSettings) {
+            return; // Elements don't exist on this page
+        }
+        
+        chunkingSettings.style.display = useSmartChunking.checked ? 'block' : 'none';
     }
     
     displayTranslationResults(result) {
         const resultsDiv = document.getElementById('translationResults');
         const infoDiv = document.getElementById('translationInfo');
         const linksDiv = document.getElementById('downloadLinks');
+        
+        // Check if required elements exist
+        if (!resultsDiv || !infoDiv || !linksDiv) {
+            console.warn('Translation results display elements not found');
+            return;
+        }
         
         // Handle the new API response format
         const data = result.data || result;
@@ -737,7 +1214,17 @@ class DifyTestApp {
     }
     
     addToTranslationHistory(fileName, config, result) {
-        const historyTable = document.getElementById('translationHistoryTable').getElementsByTagName('tbody')[0];
+        const historyTableElement = document.getElementById('translationHistoryTable');
+        if (!historyTableElement) {
+            console.warn('Translation history table not found');
+            return;
+        }
+        
+        const historyTable = historyTableElement.getElementsByTagName('tbody')[0];
+        if (!historyTable) {
+            console.warn('Translation history table body not found');
+            return;
+        }
         
         // Remove "No translation history" row if it exists
         const noHistoryRow = historyTable.querySelector('td[colspan="7"]');
@@ -888,7 +1375,4 @@ class DifyTestApp {
     }
 }
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new DifyTestApp();
-});
+// App initialization is handled in the HTML template to avoid duplicate instances

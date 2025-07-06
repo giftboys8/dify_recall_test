@@ -1,0 +1,13 @@
+{
+  "provider": "deepseek",
+  "source_language": "en",
+  "target_language": "zh-CN",
+  "output_format": "docx",
+  "layout": "side_by_side",
+  "use_smart_chunking": true,
+  "max_chunk_chars": 3000,
+  "min_chunk_chars": 500,
+  "batch_size": 10,
+  "delay": 1,
+  "api_key": "sk-17019b4367264fb385bfffcfb3e19cb6"
+}
