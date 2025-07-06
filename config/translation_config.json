@@ -7,7 +7,7 @@
   "use_smart_chunking": true,
   "max_chunk_chars": 3000,
   "min_chunk_chars": 500,
-  "batch_size": 10,
+  "batch_size": 20,
   "delay": 1,
   "api_key": "sk-17019b4367264fb385bfffcfb3e19cb6"
 }

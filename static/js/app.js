@@ -837,6 +837,12 @@ class DifyTestApp {
             cancelUploadBtn.addEventListener('click', () => this.cancelUpload());
         }
         
+        // Clear history button
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        if (clearHistoryBtn) {
+            clearHistoryBtn.addEventListener('click', () => this.clearTranslationHistory());
+        }
+        
         // Initialize UI states
         this.updateTranslationProviderUI();
         this.updateChunkingSettingsUI();
@@ -1214,7 +1220,7 @@ class DifyTestApp {
     }
     
     addToTranslationHistory(fileName, config, result) {
-        const historyTableElement = document.getElementById('translationHistoryTable');
+        const historyTableElement = document.getElementById('historyTable');
         if (!historyTableElement) {
             console.warn('Translation history table not found');
             return;
@@ -1227,33 +1233,55 @@ class DifyTestApp {
         }
         
         // Remove "No translation history" row if it exists
-        const noHistoryRow = historyTable.querySelector('td[colspan="7"]');
+        const noHistoryRow = historyTable.querySelector('td[colspan="3"]');
         if (noHistoryRow) {
             noHistoryRow.parentElement.remove();
         }
-        
+
         const row = historyTable.insertRow(0);
         const data = result.data || result;
         const timestamp = new Date().toLocaleString();
-        const languages = `${config.source_language} → ${config.target_language}`;
-        const status = result.success ? 'Success' : 'Failed';
+        const status = result.success ? '成功' : '失败';
         const statusClass = result.success ? 'text-success' : 'text-danger';
-        
+
+        // Create a clickable filename that shows download options
+        const downloadLinks = data.output_files ? data.output_files.map(file => 
+            `<a href="${file.download_url}" class="text-decoration-none" download title="下载 ${file.filename}">
+                <i class="fas fa-download"></i>
+            </a>`
+        ).join(' ') : '';
+
         row.innerHTML = `
-            <td>${fileName}</td>
-            <td>${config.provider}</td>
-            <td>${languages}</td>
-            <td><span class="${statusClass}">${status}</span></td>
-            <td>${data.processing_time}s</td>
-            <td>${timestamp}</td>
             <td>
-                ${data.output_files ? data.output_files.map(file => 
-                    `<a href="${file.download_url}" class="btn btn-sm btn-outline-primary me-1" download>
-                        <i class="fas fa-download"></i> ${file.filename}
-                    </a>`
-                ).join('') : ''}
+                <span title="${fileName}">${fileName}</span>
+                ${downloadLinks ? ` ${downloadLinks}` : ''}
             </td>
+            <td><span class="${statusClass}">${status}</span></td>
+            <td>${timestamp}</td>
         `;
+    }
+    
+    clearTranslationHistory() {
+        if (!confirm('确定要清空所有翻译历史吗？')) {
+            return;
+        }
+        
+        const historyTableElement = document.getElementById('historyTable');
+        if (!historyTableElement) {
+            console.warn('Translation history table not found');
+            return;
+        }
+        
+        const historyTable = historyTableElement.getElementsByTagName('tbody')[0];
+        if (!historyTable) {
+            console.warn('Translation history table body not found');
+            return;
+        }
+        
+        // Clear all rows and add the "no history" message
+        historyTable.innerHTML = '<tr><td colspan="3" class="text-center text-muted">暂无翻译历史</td></tr>';
+        
+        this.showAlert('翻译历史已清空', 'success');
     }
     
     // Tab switching event handling
