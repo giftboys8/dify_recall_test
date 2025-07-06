@@ -60,6 +60,16 @@ class DifyTestApp {
         
         // Tab switching events
         this.bindTabEvents();
+        
+        // Translation provider change event
+        document.getElementById('translationProvider').addEventListener('change', () => {
+            this.updateTranslationProviderUI();
+        });
+        
+        // Smart chunking toggle event
+        document.getElementById('useSmartChunking').addEventListener('change', () => {
+            this.updateChunkingSettingsUI();
+        });
     }
 
     async loadConfig() {
@@ -487,14 +497,6 @@ class DifyTestApp {
 
     // PDF Translation Methods
     bindTranslationEvents() {
-        // Translation provider change
-        const translationProvider = document.getElementById('translationProvider');
-        if (translationProvider) {
-            translationProvider.addEventListener('change', (e) => {
-                this.updateTranslationProviderUI(e.target.value);
-            });
-        }
-        
         // Test translation
         const testTranslationBtn = document.getElementById('testTranslationBtn');
         if (testTranslationBtn) {
@@ -507,39 +509,12 @@ class DifyTestApp {
             translatePdfBtn.addEventListener('click', () => this.translatePdf());
         }
         
-        // Initialize translation provider UI
-        this.updateTranslationProviderUI('nllb');
-        
-        // Smart chunking settings toggle
-        const useSmartChunking = document.getElementById('useSmartChunking');
-        if (useSmartChunking) {
-            useSmartChunking.addEventListener('change', (e) => {
-                const chunkingSettings = document.getElementById('chunkingSettings');
-                if (chunkingSettings) {
-                    chunkingSettings.style.display = e.target.checked ? 'block' : 'none';
-                }
-            });
-        }
+        // Initialize UI states
+        this.updateTranslationProviderUI();
+        this.updateChunkingSettingsUI();
     }
     
-    updateTranslationProviderUI(provider) {
-        const apiKeyGroup = document.getElementById('apiKeyGroup');
-        if (apiKeyGroup) {
-            // 显示API密钥输入框的提供商：openai, deepseek, deepseek-reasoner
-            const needsApiKey = ['openai', 'deepseek', 'deepseek-reasoner'].includes(provider);
-            apiKeyGroup.style.display = needsApiKey ? 'block' : 'none';
-            
-            // 更新API密钥标签
-            const apiKeyLabel = apiKeyGroup.querySelector('label');
-            if (apiKeyLabel) {
-                if (provider === 'openai') {
-                    apiKeyLabel.textContent = 'OpenAI API Key';
-                } else if (provider === 'deepseek' || provider === 'deepseek-reasoner') {
-                    apiKeyLabel.textContent = 'DeepSeek API Key';
-                }
-            }
-        }
-    }
+
     
     async testTranslation() {
         const testText = document.getElementById('testText').value.trim();
@@ -692,6 +667,32 @@ class DifyTestApp {
         }
         
         return config;
+    }
+    
+    updateTranslationProviderUI() {
+        const provider = document.getElementById('translationProvider').value;
+        const apiKeyInput = document.getElementById('translationApiKey');
+        const apiKeyHelp = apiKeyInput.nextElementSibling;
+        
+        if (provider === 'nllb') {
+            apiKeyInput.disabled = true;
+            apiKeyInput.value = '';
+            apiKeyHelp.textContent = 'NLLB本地模型无需API Key';
+        } else {
+            apiKeyInput.disabled = false;
+            const providerName = {
+                'openai': 'OpenAI',
+                'deepseek': 'DeepSeek',
+                'deepseek-reasoner': 'DeepSeek Reasoner'
+            }[provider] || provider;
+            apiKeyHelp.textContent = `请输入${providerName} API Key`;
+        }
+    }
+    
+    updateChunkingSettingsUI() {
+        const useSmartChunking = document.getElementById('useSmartChunking').checked;
+        const chunkingSettings = document.getElementById('chunkingSettings');
+        chunkingSettings.style.display = useSmartChunking ? 'block' : 'none';
     }
     
     displayTranslationResults(result) {

@@ -1,9 +1,9 @@
 {
   "translation_settings": {
-    "provider": "deepseek",
-    "api_key": "YOUR_DEEPSEEK_API_KEY",
-    "api_base_url": "https://api.deepseek.com/v1",
-    "model": "deepseek-chat",
+    "provider": "openai",
+    "api_key": "YOUR_OPENAI_API_KEY",
+    "api_base_url": "https://api.openai.com/v1",
+    "model": "gpt-3.5-turbo",
     "source_language": "auto",
     "target_language": "zh-CN",
     "temperature": 0.1,
@@ -45,6 +45,12 @@
       "remove_extra_whitespace": true,
       "normalize_unicode": true,
       "fix_encoding": true
+    },
+    "quality_control": {
+      "min_translation_length": 5,
+      "max_translation_length": 10000,
+      "detect_untranslated": true,
+      "validate_encoding": true
     }
   },
   "ui_settings": {
@@ -59,28 +65,45 @@
       "de": "德语",
       "es": "西班牙语",
       "ru": "俄语",
-      "ar": "阿拉伯语"
+      "ar": "阿拉伯语",
+      "pt": "葡萄牙语",
+      "it": "意大利语",
+      "th": "泰语",
+      "vi": "越南语"
     },
     "file_upload": {
       "max_file_size": 52428800,
       "allowed_extensions": [".pdf"],
       "multiple_files": true
+    },
+    "progress_tracking": {
+      "show_detailed_progress": true,
+      "update_interval": 1000,
+      "show_time_remaining": true
     }
   },
   "advanced_settings": {
     "caching": {
       "enabled": true,
       "cache_translations": true,
+      "cache_parsed_pdfs": true,
       "cache_duration": 86400
     },
     "logging": {
       "level": "INFO",
+      "log_translations": false,
       "log_api_calls": true,
       "log_file_operations": true
+    },
+    "security": {
+      "sanitize_filenames": true,
+      "validate_file_types": true,
+      "scan_for_malware": false
     },
     "performance": {
       "parallel_processing": true,
       "max_workers": 4,
+      "memory_limit": 2147483648,
       "timeout_per_file": 3600
     }
   }
