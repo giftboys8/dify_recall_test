@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify
 from typing import List, Dict, Any
 from urllib.parse import urlparse
 
-from ..core.websites_manager import WebsitesManager, Website
+from ..core.websites_manager import WebsitesManager, Website, WebsiteAccount
 from ..utils.logger import get_logger
 
 
@@ -60,7 +60,14 @@ class WebsitesAPI:
                         'created_at': website.created_at,
                         'updated_at': website.updated_at,
                         'visit_count': website.visit_count,
-                        'last_visited': website.last_visited
+                        'last_visited': website.last_visited,
+                        'accounts': [{
+                            'id': acc.id,
+                            'username': acc.username,
+                            'description': acc.notes,
+                            'created_at': acc.created_at,
+                            'updated_at': acc.updated_at
+                        } for acc in (website.accounts or [])]
                     }
                     websites_data.append(website_dict)
                 
@@ -116,7 +123,8 @@ class WebsitesAPI:
                     title=data.get('title', '').strip(),
                     description=data.get('description', '').strip(),
                     tags=data.get('tags', []),
-                    favicon_url=data.get('favicon_url', '').strip()
+                    favicon_url=data.get('favicon_url', '').strip(),
+                    accounts=data.get('accounts', [])
                 )
                 
                 # 添加网站
@@ -137,7 +145,14 @@ class WebsitesAPI:
                         'created_at': created_website.created_at,
                         'updated_at': created_website.updated_at,
                         'visit_count': created_website.visit_count,
-                        'last_visited': created_website.last_visited
+                        'last_visited': created_website.last_visited,
+                        'accounts': [{
+                            'id': acc.id,
+                            'username': acc.username,
+                            'description': acc.notes,
+                            'created_at': acc.created_at,
+                            'updated_at': acc.updated_at
+                        } for acc in (created_website.accounts or [])]
                     },
                     'message': '网站添加成功'
                 }), 201
@@ -182,6 +197,9 @@ class WebsitesAPI:
                 if 'tags' in data and isinstance(data['tags'], list):
                     update_data['tags'] = data['tags']
                 
+                if 'accounts' in data and isinstance(data['accounts'], list):
+                    update_data['accounts'] = data['accounts']
+                
                 # 执行更新
                 success = self.websites_manager.update_website(website_id, **update_data)
                 
@@ -200,7 +218,14 @@ class WebsitesAPI:
                             'created_at': updated_website.created_at,
                             'updated_at': updated_website.updated_at,
                             'visit_count': updated_website.visit_count,
-                            'last_visited': updated_website.last_visited
+                            'last_visited': updated_website.last_visited,
+                            'accounts': [{
+                                'id': acc.id,
+                                'username': acc.username,
+                                'description': acc.notes,
+                                'created_at': acc.created_at,
+                                'updated_at': acc.updated_at
+                            } for acc in (updated_website.accounts or [])]
                         },
                         'message': '网站更新成功'
                     })
@@ -269,7 +294,14 @@ class WebsitesAPI:
                             'created_at': website.created_at,
                             'updated_at': website.updated_at,
                             'visit_count': website.visit_count,
-                            'last_visited': website.last_visited
+                            'last_visited': website.last_visited,
+                            'accounts': [{
+                                'id': acc.id,
+                                'username': acc.username,
+                                'description': acc.notes,
+                                'created_at': acc.created_at,
+                                'updated_at': acc.updated_at
+                            } for acc in (website.accounts or [])]
                         }
                     })
                 else:
@@ -321,7 +353,14 @@ class WebsitesAPI:
                         'created_at': website.created_at,
                         'updated_at': website.updated_at,
                         'visit_count': website.visit_count,
-                        'last_visited': website.last_visited
+                        'last_visited': website.last_visited,
+                        'accounts': [{
+                            'id': acc.id,
+                            'username': acc.username,
+                            'description': acc.notes,
+                            'created_at': acc.created_at,
+                            'updated_at': acc.updated_at
+                        } for acc in (website.accounts or [])]
                     }
                     websites_data.append(website_dict)
                 
@@ -436,6 +475,214 @@ class WebsitesAPI:
                 
             except Exception as e:
                 self.logger.error(f"导入网站数据失败: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 500
+        
+        @self.blueprint.route('/api/websites/<int:website_id>/accounts', methods=['GET'])
+        def get_website_accounts(website_id):
+            """获取网站账号列表"""
+            try:
+                # 检查网站是否存在
+                existing_website = self.websites_manager.get_website(website_id)
+                if not existing_website:
+                    return jsonify({
+                        'success': False,
+                        'error': '网站不存在'
+                    }), 404
+                
+                accounts = self.websites_manager.get_website_accounts(website_id)
+                
+                accounts_data = [{
+                    'id': acc.id,
+                    'username': acc.username,
+                    'description': acc.notes,
+                    'created_at': acc.created_at,
+                    'updated_at': acc.updated_at
+                } for acc in accounts]
+                
+                return jsonify({
+                    'success': True,
+                    'data': accounts_data,
+                    'total': len(accounts_data)
+                })
+                
+            except Exception as e:
+                self.logger.error(f"获取网站账号失败: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 500
+        
+        @self.blueprint.route('/api/websites/<int:website_id>/accounts', methods=['POST'])
+        def add_website_account(website_id):
+            """添加网站账号"""
+            try:
+                # 检查网站是否存在
+                existing_website = self.websites_manager.get_website(website_id)
+                if not existing_website:
+                    return jsonify({
+                        'success': False,
+                        'error': '网站不存在'
+                    }), 404
+                
+                data = request.get_json()
+                if not data:
+                    return jsonify({
+                        'success': False,
+                        'error': '请提供账号数据'
+                    }), 400
+                
+                username = data.get('username', '').strip()
+                if not username:
+                    return jsonify({
+                        'success': False,
+                        'error': '用户名是必需的'
+                    }), 400
+                
+                # 创建账号对象
+                account = WebsiteAccount(
+                    username=username,
+                    notes=data.get('notes', '').strip()
+                )
+                
+                # 添加账号
+                account_id = self.websites_manager.add_website_account(website_id, account)
+                
+                # 获取完整的账号信息
+                accounts = self.websites_manager.get_website_accounts(website_id)
+                created_account = next((acc for acc in accounts if acc.id == account_id), None)
+                
+                if created_account:
+                    return jsonify({
+                        'success': True,
+                        'data': {
+                            'id': created_account.id,
+                            'username': created_account.username,
+                            'description': created_account.notes,
+                            'created_at': created_account.created_at,
+                            'updated_at': created_account.updated_at
+                        },
+                        'message': '账号添加成功'
+                    }), 201
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': '添加账号失败'
+                    }), 500
+                
+            except ValueError as e:
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 400
+            except Exception as e:
+                self.logger.error(f"添加网站账号失败: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 500
+        
+        @self.blueprint.route('/api/websites/<int:website_id>/accounts/<account_id>', methods=['PUT'])
+        def update_website_account(website_id, account_id):
+            """更新网站账号"""
+            try:
+                # 检查网站是否存在
+                existing_website = self.websites_manager.get_website(website_id)
+                if not existing_website:
+                    return jsonify({
+                        'success': False,
+                        'error': '网站不存在'
+                    }), 404
+                
+                data = request.get_json()
+                if not data:
+                    return jsonify({
+                        'success': False,
+                        'error': '请提供更新数据'
+                    }), 400
+                
+                # 准备更新数据
+                update_data = {}
+                if 'username' in data:
+                    username = data['username'].strip()
+                    if not username:
+                        return jsonify({
+                            'success': False,
+                            'error': '用户名不能为空'
+                        }), 400
+                    update_data['username'] = username
+                
+                if 'notes' in data:
+                    update_data['notes'] = data['notes'].strip()
+                
+                # 执行更新
+                success = self.websites_manager.update_website_account(website_id, account_id, **update_data)
+                
+                if success:
+                    # 获取更新后的账号信息
+                    accounts = self.websites_manager.get_website_accounts(website_id)
+                    updated_account = next((acc for acc in accounts if acc.id == account_id), None)
+                    
+                    if updated_account:
+                        return jsonify({
+                            'success': True,
+                            'data': {
+                                'id': updated_account.id,
+                                'username': updated_account.username,
+                                'description': updated_account.notes,
+                                'created_at': updated_account.created_at,
+                                'updated_at': updated_account.updated_at
+                            },
+                            'message': '账号更新成功'
+                        })
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'error': '账号不存在'
+                        }), 404
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': '更新失败'
+                    }), 500
+                
+            except Exception as e:
+                self.logger.error(f"更新网站账号失败: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': str(e)
+                }), 500
+        
+        @self.blueprint.route('/api/websites/<int:website_id>/accounts/<account_id>', methods=['DELETE'])
+        def delete_website_account(website_id, account_id):
+            """删除网站账号"""
+            try:
+                # 检查网站是否存在
+                existing_website = self.websites_manager.get_website(website_id)
+                if not existing_website:
+                    return jsonify({
+                        'success': False,
+                        'error': '网站不存在'
+                    }), 404
+                
+                # 执行删除
+                success = self.websites_manager.delete_website_account(website_id, account_id)
+                
+                if success:
+                    return jsonify({
+                        'success': True,
+                        'message': '账号删除成功'
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': '删除失败或账号不存在'
+                    }), 404
+                
+            except Exception as e:
+                self.logger.error(f"删除网站账号失败: {e}")
                 return jsonify({
                     'success': False,
                     'error': str(e)

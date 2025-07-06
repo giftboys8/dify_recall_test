@@ -17,6 +17,26 @@ from bs4 import BeautifulSoup
 
 
 @dataclass
+class WebsiteAccount:
+    """网站账号数据模型"""
+    username: str = ""
+    email: str = ""
+    notes: str = ""
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    id: Optional[str] = None
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = datetime.now().isoformat()
+        if self.updated_at is None:
+            self.updated_at = self.created_at
+        if self.id is None:
+            import uuid
+            self.id = str(uuid.uuid4())
+
+
+@dataclass
 class Website:
     """网站数据模型"""
     id: Optional[int] = None
@@ -25,6 +45,7 @@ class Website:
     description: str = ""
     tags: List[str] = None
     favicon_url: str = ""
+    accounts: List[WebsiteAccount] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     visit_count: int = 0
@@ -33,6 +54,8 @@ class Website:
     def __post_init__(self):
         if self.tags is None:
             self.tags = []
+        if self.accounts is None:
+            self.accounts = []
         if self.created_at is None:
             self.created_at = datetime.now().isoformat()
         if self.updated_at is None:
@@ -52,6 +75,7 @@ class WebsitesManager:
     def _init_database(self):
         """初始化数据库"""
         with sqlite3.connect(self.db_path) as conn:
+            # 创建网站表
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS websites (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,12 +84,20 @@ class WebsitesManager:
                     description TEXT,
                     tags TEXT,  -- JSON格式存储标签列表
                     favicon_url TEXT,
+                    accounts TEXT,  -- JSON格式存储账号列表
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     visit_count INTEGER DEFAULT 0,
                     last_visited TEXT
                 )
             """)
+            
+            # 检查是否需要添加accounts字段（向后兼容）
+            cursor = conn.execute("PRAGMA table_info(websites)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'accounts' not in columns:
+                conn.execute("ALTER TABLE websites ADD COLUMN accounts TEXT DEFAULT '[]'")
+            
             conn.commit()
     
     def add_website(self, website: Website) -> int:
@@ -79,15 +111,16 @@ class WebsitesManager:
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.execute("""
-                    INSERT INTO websites (url, title, description, tags, favicon_url, 
+                    INSERT INTO websites (url, title, description, tags, favicon_url, accounts,
                                         created_at, updated_at, visit_count, last_visited)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     website.url,
                     website.title,
                     website.description,
                     json.dumps(website.tags, ensure_ascii=False),
                     website.favicon_url,
+                    json.dumps([asdict(acc) for acc in website.accounts], ensure_ascii=False),
                     website.created_at,
                     website.updated_at,
                     website.visit_count,
@@ -119,6 +152,16 @@ class WebsitesManager:
                 elif field == 'tags' and isinstance(value, list):
                     update_fields.append("tags = ?")
                     values.append(json.dumps(value, ensure_ascii=False))
+                elif field == 'accounts' and isinstance(value, list):
+                    update_fields.append("accounts = ?")
+                    # 处理WebsiteAccount对象或字典
+                    accounts_data = []
+                    for acc in value:
+                        if isinstance(acc, WebsiteAccount):
+                            accounts_data.append(asdict(acc))
+                        elif isinstance(acc, dict):
+                            accounts_data.append(acc)
+                    values.append(json.dumps(accounts_data, ensure_ascii=False))
                 elif field == 'visit_count' and isinstance(value, int):
                     update_fields.append("visit_count = ?")
                     values.append(value)
@@ -309,6 +352,20 @@ class WebsitesManager:
             except json.JSONDecodeError:
                 tags = []
         
+        accounts = []
+        # 处理accounts字段（向后兼容）
+        try:
+            accounts_data = row['accounts'] or '[]'
+        except (KeyError, IndexError):
+            accounts_data = '[]'
+        
+        if accounts_data:
+            try:
+                accounts_list = json.loads(accounts_data)
+                accounts = [WebsiteAccount(**acc_data) for acc_data in accounts_list]
+            except (json.JSONDecodeError, TypeError):
+                accounts = []
+        
         return Website(
             id=row['id'],
             url=row['url'],
@@ -316,6 +373,7 @@ class WebsitesManager:
             description=row['description'] or "",
             tags=tags,
             favicon_url=row['favicon_url'] or "",
+            accounts=accounts,
             created_at=row['created_at'],
             updated_at=row['updated_at'],
             visit_count=row['visit_count'],
@@ -403,3 +461,94 @@ class WebsitesManager:
                 continue
         
         return imported_count
+    
+    def add_website_account(self, website_id: int, account: WebsiteAccount) -> str:
+        """为网站添加账号"""
+        try:
+            website = self.get_website(website_id)
+            if not website:
+                raise ValueError(f"网站不存在: ID {website_id}")
+            
+            # 添加到账号列表
+            website.accounts.append(account)
+            
+            # 更新数据库
+            success = self.update_website(website_id, accounts=website.accounts)
+            if success:
+                return account.id
+            else:
+                raise Exception("更新数据库失败")
+            
+        except Exception as e:
+            self.logger.error(f"添加网站账号失败: {e}")
+            raise
+    
+    def update_website_account(self, website_id: int, account_id: str, **kwargs) -> bool:
+        """更新网站账号"""
+        try:
+            website = self.get_website(website_id)
+            if not website:
+                raise ValueError(f"网站不存在: ID {website_id}")
+            
+            # 查找账号
+            account = None
+            for acc in website.accounts:
+                if acc.id == account_id:
+                    account = acc
+                    break
+            
+            if not account:
+                raise ValueError(f"账号不存在: ID {account_id}")
+            
+            # 更新账号信息
+            if 'username' in kwargs:
+                account.username = kwargs['username']
+            if 'email' in kwargs:
+                account.email = kwargs['email']
+            if 'notes' in kwargs:
+                account.notes = kwargs['notes']
+            
+            # 更新时间戳
+            from datetime import datetime
+            account.updated_at = datetime.now().isoformat()
+            
+            # 更新数据库
+            return self.update_website(website_id, accounts=website.accounts)
+            
+        except Exception as e:
+            self.logger.error(f"更新网站账号失败: {e}")
+            raise
+    
+    def delete_website_account(self, website_id: int, account_id: str) -> bool:
+        """删除网站账号"""
+        try:
+            website = self.get_website(website_id)
+            if not website:
+                raise ValueError(f"网站不存在: ID {website_id}")
+            
+            # 查找并删除账号
+            original_count = len(website.accounts)
+            website.accounts = [acc for acc in website.accounts if acc.id != account_id]
+            
+            if len(website.accounts) == original_count:
+                raise ValueError(f"账号不存在: ID {account_id}")
+            
+            # 更新数据库
+            return self.update_website(website_id, accounts=website.accounts)
+            
+        except Exception as e:
+            self.logger.error(f"删除网站账号失败: {e}")
+            raise
+    
+    def get_website_accounts(self, website_id: int) -> List[WebsiteAccount]:
+        """获取网站的所有账号"""
+        try:
+            website = self.get_website(website_id)
+            if not website:
+                raise ValueError(f"网站不存在: ID {website_id}")
+            
+            return website.accounts
+            
+        except Exception as e:
+            self.logger.error(f"获取网站账号失败: {e}")
+            raise

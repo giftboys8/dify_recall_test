@@ -160,6 +160,16 @@ class WebInterface:
             """Main page."""
             return render_template('index.html')
         
+        @self.app.route('/recall')
+        def recall():
+            """Recall testing page."""
+            return render_template('recall.html')
+        
+        @self.app.route('/translation')
+        def translation():
+            """PDF translation page."""
+            return render_template('translation.html')
+        
         @self.app.route('/ideas')
         def ideas():
             """Ideas page."""

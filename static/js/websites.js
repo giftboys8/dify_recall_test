@@ -254,19 +254,28 @@ class WebsitesManager {
                 <td>
                     <div class="action-buttons">
                         <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-info" 
+                                    onclick="websitesManager.manageAccounts(${website.id})" 
+                                    title="账号管理" 
+                                    aria-label="管理账号">
+                                <i class="bi bi-person-gear"></i>
+                            </button>
                             <button class="btn btn-outline-primary" 
                                     onclick="websitesManager.editWebsite(${website.id})" 
-                                    title="编辑">
+                                    title="编辑" 
+                                    aria-label="编辑网站">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-outline-success" 
                                     onclick="websitesManager.visitWebsite('${website.url}', ${website.id})" 
-                                    title="访问">
+                                    title="访问" 
+                                    aria-label="访问网站">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </button>
                             <button class="btn btn-outline-danger" 
                                     onclick="websitesManager.deleteWebsite(${website.id})" 
-                                    title="删除">
+                                    title="删除" 
+                                    aria-label="删除网站">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -280,24 +289,37 @@ class WebsitesManager {
      * 更新统计信息
      */
     updateStats() {
-        document.getElementById('totalWebsites').textContent = this.websites.length;
-        document.getElementById('totalTags').textContent = this.allTags.length;
+        // 添加空值检查，防止DOM元素不存在时出错
+        const totalWebsitesEl = document.getElementById('totalWebsites');
+        const totalTagsEl = document.getElementById('totalTags');
+        const totalVisitsEl = document.getElementById('totalVisits');
+        const recentlyAddedEl = document.getElementById('recentlyAdded');
         
-        // 计算今日访问量（简化版本）
-        const today = new Date().toDateString();
-        const todayVisits = this.websites.filter(website => {
-            if (!website.last_visited) return false;
-            return new Date(website.last_visited).toDateString() === today;
-        }).length;
-        document.getElementById('todayVisits').textContent = todayVisits;
+        if (totalWebsitesEl) {
+            totalWebsitesEl.textContent = this.websites.length;
+        }
         
-        // 计算最近添加（7天内）
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const recentAdded = this.websites.filter(website => {
-            return new Date(website.created_at) > weekAgo;
-        }).length;
-        document.getElementById('recentAdded').textContent = recentAdded;
+        if (totalTagsEl) {
+            totalTagsEl.textContent = this.allTags.length;
+        }
+        
+        if (totalVisitsEl) {
+            // 计算总访问次数
+            const totalVisits = this.websites.reduce((sum, website) => {
+                return sum + (website.visit_count || 0);
+            }, 0);
+            totalVisitsEl.textContent = totalVisits;
+        }
+        
+        if (recentlyAddedEl) {
+            // 计算最近添加（7天内）
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const recentAdded = this.websites.filter(website => {
+                return new Date(website.created_at) > weekAgo;
+            }).length;
+            recentlyAddedEl.textContent = recentAdded;
+        }
     }
 
     /**
@@ -364,6 +386,7 @@ class WebsitesManager {
         const favicon = document.getElementById('websiteFavicon').value.trim();
         const tagsContainer = document.getElementById('websiteTagsInput');
         const tags = this.getTags(tagsContainer);
+        const accounts = this.getAccountsFromForm('add');
         
         if (!url) {
             this.showError('请输入网站URL');
@@ -381,7 +404,8 @@ class WebsitesManager {
                     title: title,
                     description: description,
                     tags: tags,
-                    favicon_url: favicon
+                    favicon_url: favicon,
+                    accounts: accounts
                 })
             });
             
@@ -425,6 +449,9 @@ class WebsitesManager {
         const tagsContainer = document.getElementById('editWebsiteTagsInput');
         this.setTags(tagsContainer, website.tags || []);
         
+        // 加载账号数据
+        this.loadAccountsToForm(website.accounts || [], 'edit');
+        
         // 显示模态框
         new bootstrap.Modal(document.getElementById('editWebsiteModal')).show();
     }
@@ -440,6 +467,7 @@ class WebsitesManager {
         const favicon = document.getElementById('editWebsiteFavicon').value.trim();
         const tagsContainer = document.getElementById('editWebsiteTagsInput');
         const tags = this.getTags(tagsContainer);
+        const accounts = this.getAccountsFromForm('edit');
         
         if (!url) {
             this.showError('请输入网站URL');
@@ -457,7 +485,8 @@ class WebsitesManager {
                     title: title,
                     description: description,
                     tags: tags,
-                    favicon_url: favicon
+                    favicon_url: favicon,
+                    accounts: accounts
                 })
             });
             
@@ -650,6 +679,7 @@ class WebsitesManager {
         document.getElementById('addWebsiteForm').reset();
         const tagsContainer = document.getElementById('websiteTagsInput');
         this.setTags(tagsContainer, []);
+        this.clearAccountsFromForm('add');
     }
 
     /**
@@ -730,6 +760,361 @@ class WebsitesManager {
         toastElement.addEventListener('hidden.bs.toast', () => {
             toastElement.remove();
         });
+    }
+
+    /**
+     * HTML转义
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * 表单中的账号管理
+     */
+    addAccountToForm(formType) {
+        const usernameId = formType === 'add' ? 'addAccountUsername' : 'editAccountUsername';
+        const descriptionId = formType === 'add' ? 'addAccountDescription' : 'editAccountDescription';
+        const listId = formType === 'add' ? 'addWebsiteAccountsList' : 'editWebsiteAccountsList';
+        
+        const usernameElement = document.getElementById(usernameId);
+        const descriptionElement = document.getElementById(descriptionId);
+        const accountsList = document.getElementById(listId);
+        
+        if (!usernameElement || !descriptionElement || !accountsList) {
+            console.warn('Required form elements not found');
+            return;
+        }
+        
+        const username = usernameElement.value.trim();
+        const description = descriptionElement.value.trim();
+        
+        if (!username) {
+            this.showError('请输入用户名');
+            return;
+        }
+        
+        const accountIndex = accountsList.children.length;
+        
+        const accountItem = document.createElement('div');
+        accountItem.className = 'account-item d-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+        accountItem.innerHTML = `
+            <div>
+                <strong>${this.escapeHtml(username)}</strong>
+                ${description ? `<small class="text-muted d-block">${this.escapeHtml(description)}</small>` : ''}
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="websitesManager.removeAccountFromForm(this, '${formType}')">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+        accountItem.dataset.username = username;
+        accountItem.dataset.notes = description;
+        
+        accountsList.appendChild(accountItem);
+        
+        // 清空输入框
+        usernameElement.value = '';
+        descriptionElement.value = '';
+    }
+    
+    removeAccountFromForm(button, formType) {
+        button.closest('.account-item').remove();
+    }
+    
+    getAccountsFromForm(formType) {
+        const listId = formType === 'add' ? 'addWebsiteAccountsList' : 'editWebsiteAccountsList';
+        const accountsList = document.getElementById(listId);
+        const accounts = [];
+        
+        if (!accountsList) {
+            console.warn(`Element with id '${listId}' not found`);
+            return accounts;
+        }
+        
+        Array.from(accountsList.children).forEach(item => {
+            accounts.push({
+                username: item.dataset.username,
+                notes: item.dataset.notes || ''
+            });
+        });
+        
+        return accounts;
+    }
+    
+    clearAccountsFromForm(formType) {
+        const listId = formType === 'add' ? 'addWebsiteAccountsList' : 'editWebsiteAccountsList';
+        const element = document.getElementById(listId);
+        if (element) {
+            element.innerHTML = '';
+        }
+    }
+    
+    loadAccountsToForm(accounts, formType) {
+        this.clearAccountsFromForm(formType);
+        const listId = formType === 'add' ? 'addWebsiteAccountsList' : 'editWebsiteAccountsList';
+        const accountsList = document.getElementById(listId);
+        
+        if (!accountsList) {
+            console.warn(`Element with id '${listId}' not found`);
+            return;
+        }
+        
+        accounts.forEach(account => {
+            const accountItem = document.createElement('div');
+            accountItem.className = 'account-item d-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+            accountItem.innerHTML = `
+                <div>
+                    <strong>${this.escapeHtml(account.username)}</strong>
+                    ${account.notes ? `<small class="text-muted d-block">${this.escapeHtml(account.notes)}</small>` : ''}
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="websitesManager.removeAccountFromForm(this, '${formType}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            accountItem.dataset.username = account.username;
+            accountItem.dataset.notes = account.notes || '';
+            
+            accountsList.appendChild(accountItem);
+        });
+    }
+    /**
+     * 管理网站账号
+     */
+    async manageAccounts(websiteId) {
+        const website = this.websites.find(w => w.id === websiteId);
+        if (!website) {
+            this.showError('网站不存在');
+            return;
+        }
+        
+        this.currentWebsiteId = websiteId;
+        
+        // 设置模态框标题
+        document.getElementById('accountsModalLabel').textContent = `管理账号 - ${website.title || website.url}`;
+        
+        // 加载账号列表
+        await this.loadWebsiteAccounts(websiteId);
+        
+        // 显示模态框
+        new bootstrap.Modal(document.getElementById('accountsModal')).show();
+    }
+
+    /**
+     * 加载网站账号列表
+     */
+    async loadWebsiteAccounts(websiteId) {
+        try {
+            const response = await fetch(`/api/websites/${websiteId}/accounts`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.renderAccountsList(result.data);
+            } else {
+                this.showError('加载账号列表失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('加载账号列表失败:', error);
+            this.showError('加载账号列表失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 渲染账号列表
+     */
+    renderAccountsList(accounts) {
+        const tbody = document.getElementById('accountsTableBody');
+        const emptyState = document.getElementById('accountsEmptyState');
+        
+        if (accounts.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = accounts.map(account => `
+            <tr>
+                <td>
+                    <div class="account-username" title="${account.username}">
+                        ${account.username}
+                    </div>
+                </td>
+                <td>
+                    <div class="account-description" title="${account.notes || ''}">
+                        ${account.notes || '暂无描述'}
+                    </div>
+                </td>
+                <td>
+                    <div class="account-created">
+                        ${new Date(account.created_at).toLocaleDateString()}
+                    </div>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary" 
+                                onclick="websitesManager.editAccount('${account.id}')" 
+                                title="编辑" 
+                                aria-label="编辑账号">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" 
+                                onclick="websitesManager.deleteAccount('${account.id}')" 
+                                title="删除" 
+                                aria-label="删除账号">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    /**
+     * 添加账号
+     */
+    async addAccount() {
+        const username = document.getElementById('accountUsername').value.trim();
+        const description = document.getElementById('accountDescription').value.trim();
+        
+        if (!username) {
+            this.showError('请输入用户名');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/websites/${this.currentWebsiteId}/accounts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    notes: description
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showSuccess('账号添加成功');
+                this.clearAccountForm();
+                await this.loadWebsiteAccounts(this.currentWebsiteId);
+            } else {
+                this.showError('添加失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('添加账号失败:', error);
+            this.showError('添加失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 编辑账号
+     */
+    async editAccount(accountId) {
+        try {
+            const response = await fetch(`/api/websites/${this.currentWebsiteId}/accounts`);
+            const result = await response.json();
+            
+            if (result.success) {
+                const account = result.data.find(acc => acc.id === accountId);
+                if (!account) {
+                    this.showError('账号不存在');
+                    return;
+                }
+                
+                this.currentEditAccountId = accountId;
+                
+                // 填充表单
+                document.getElementById('editAccountUsername').value = account.username;
+                document.getElementById('editAccountDescription').value = account.notes || '';
+                
+                // 显示编辑模态框
+                new bootstrap.Modal(document.getElementById('editAccountModal')).show();
+            } else {
+                this.showError('获取账号信息失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('获取账号信息失败:', error);
+            this.showError('获取账号信息失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 更新账号
+     */
+    async updateAccount() {
+        const username = document.getElementById('editAccountUsername').value.trim();
+        const description = document.getElementById('editAccountDescription').value.trim();
+        
+        if (!username) {
+            this.showError('请输入用户名');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/websites/${this.currentWebsiteId}/accounts/${this.currentEditAccountId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    notes: description
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showSuccess('账号更新成功');
+                bootstrap.Modal.getInstance(document.getElementById('editAccountModal')).hide();
+                await this.loadWebsiteAccounts(this.currentWebsiteId);
+            } else {
+                this.showError('更新失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('更新账号失败:', error);
+            this.showError('更新失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 删除账号
+     */
+    async deleteAccount(accountId) {
+        if (!confirm('确定要删除这个账号吗？')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/websites/${this.currentWebsiteId}/accounts/${accountId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showSuccess('账号删除成功');
+                await this.loadWebsiteAccounts(this.currentWebsiteId);
+            } else {
+                this.showError('删除失败: ' + result.error);
+            }
+        } catch (error) {
+            console.error('删除账号失败:', error);
+            this.showError('删除失败: ' + error.message);
+        }
+    }
+
+    /**
+     * 清空账号表单
+     */
+    clearAccountForm() {
+        document.getElementById('accountUsername').value = '';
+        document.getElementById('accountDescription').value = '';
     }
 }
 
