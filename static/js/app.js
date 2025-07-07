@@ -1113,8 +1113,14 @@ class DifyTestApp {
     // 处理翻译完成
     handleTranslationComplete(result) {
         this.hideTranslationProgress();
-        this.displayTranslationResult(result);
-        this.addToTranslationHistory(result);
+        this.displayTranslationResults(result);
+        
+        // 获取文件名和配置信息
+        const data = result.data || result;
+        const fileName = data.input_file || this.selectedFile?.name || '未知文件';
+        const config = this.getTranslationConfig() || {};
+        
+        this.addToTranslationHistory(fileName, config, result);
         this.showAlert('翻译完成！', 'success');
     }
     
