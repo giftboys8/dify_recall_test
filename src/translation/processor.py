@@ -91,6 +91,30 @@ class BatchProcessor:
         )
         
         self.translation_engine = TranslationEngine(translation_config)
+        
+        # 预初始化翻译器以确保可用性
+        self._ensure_translator_ready()
+    
+    def _ensure_translator_ready(self):
+        """确保翻译器已准备就绪"""
+        try:
+            self.logger.info(f"正在预初始化翻译器: {self.config.translation_provider}")
+            
+            # 获取翻译器实例
+            translator = self.translation_engine._get_translator()
+            
+            if translator is None:
+                raise RuntimeError(f"无法创建翻译器实例: {self.config.translation_provider}")
+            
+            # 检查翻译器可用性
+            if not translator.is_available():
+                raise RuntimeError(f"翻译器 {self.config.translation_provider} 不可用")
+            
+            self.logger.info(f"翻译器 {self.config.translation_provider} 预初始化成功")
+            
+        except Exception as e:
+            self.logger.error(f"翻译器预初始化失败: {e}")
+            raise RuntimeError(f"翻译器初始化失败: {e}")
     
     def process_pdf(self, pdf_path: str, output_name: Optional[str] = None) -> ProcessingResult:
         """处理单个PDF文件

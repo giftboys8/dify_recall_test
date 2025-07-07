@@ -716,16 +716,30 @@ class TranslationEngine:
     
     def _create_translator(self) -> BaseTranslator:
         """创建翻译器实例"""
-        if self.config.provider == 'nllb':
-            return NLLBTranslator(self.config)
-        elif self.config.provider == 'openai':
-            return OpenAITranslator(self.config)
-        elif self.config.provider == 'deepseek':
-            return DeepSeekTranslator(self.config)
-        elif self.config.provider == 'deepseek-reasoner':
-            return DeepSeekReasonerTranslator(self.config)
-        else:
-            raise ValueError(f"不支持的翻译提供商: {self.config.provider}")
+        self.logger.info(f"正在创建翻译器: {self.config.provider}")
+        
+        try:
+            if self.config.provider == 'nllb':
+                translator = NLLBTranslator(self.config)
+                self.logger.info("NLLB翻译器实例创建成功")
+                return translator
+            elif self.config.provider == 'openai':
+                translator = OpenAITranslator(self.config)
+                self.logger.info("OpenAI翻译器实例创建成功")
+                return translator
+            elif self.config.provider == 'deepseek':
+                translator = DeepSeekTranslator(self.config)
+                self.logger.info("DeepSeek翻译器实例创建成功")
+                return translator
+            elif self.config.provider == 'deepseek-reasoner':
+                translator = DeepSeekReasonerTranslator(self.config)
+                self.logger.info("DeepSeek Reasoner翻译器实例创建成功")
+                return translator
+            else:
+                raise ValueError(f"不支持的翻译提供商: {self.config.provider}")
+        except Exception as e:
+            self.logger.error(f"创建翻译器失败: {e}")
+            raise
     
     def translate_texts(self, texts: List[str]) -> Dict[str, Any]:
         """翻译文本列表
@@ -737,8 +751,16 @@ class TranslationEngine:
             翻译结果字典
         """
         try:
+            self.logger.info(f"正在获取翻译器实例，提供商: {self.config.provider}")
             translator = self._get_translator()
+            
+            if translator is None:
+                self.logger.error(f"翻译器实例为None，提供商: {self.config.provider}")
+                raise RuntimeError(f"无法创建翻译器实例: {self.config.provider}")
+            
+            self.logger.info(f"翻译器实例创建成功，类型: {type(translator).__name__}，检查可用性...")
             if not translator.is_available():
+                self.logger.error(f"翻译器可用性检查失败，提供商: {self.config.provider}")
                 raise RuntimeError(f"翻译器 {self.config.provider} 不可用")
             
             self.logger.info(f"开始翻译 {len(texts)} 个文本片段")
