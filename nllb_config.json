@@ -1,0 +1,18 @@
+{
+  "nllb_translator": {
+    "model_name": "facebook/nllb-200-distilled-600M",
+    "device": "cpu",
+    "memory_optimization": {
+      "use_half_precision": false,
+      "low_cpu_mem_usage": true,
+      "use_cache": false
+    },
+    "offline_mode": {
+      "prefer_local_files": true,
+      "fallback_to_online": true
+    },
+    "fallback_models": [
+      "facebook/nllb-200-distilled-600M"
+    ]
+  }
+}

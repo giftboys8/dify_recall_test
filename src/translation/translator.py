@@ -149,7 +149,6 @@ class NLLBTranslator(BaseTranslator):
                         'translation',
                         model=model_name,
                         device=device,
-                        local_files_only=True,  # 只使用本地文件
                         model_kwargs=model_kwargs
                     )
                     self.logger.info(f"成功从本地缓存加载NLLB模型: {model_name}")
@@ -240,10 +239,12 @@ class NLLBTranslator(BaseTranslator):
             src_lang = self._get_nllb_lang_code(self.config.source_language)
             tgt_lang = self._get_nllb_lang_code(self.config.target_language)
             
+            # 调用翻译器，不传递额外的model_kwargs
             result = self.translator(
                 text,
                 src_lang=src_lang,
-                tgt_lang=tgt_lang
+                tgt_lang=tgt_lang,
+                max_length=512
             )
             
             return result[0]['translation_text']
