@@ -358,7 +358,15 @@
                         <div class="mb-3">
                             <label for="websiteTags" class="form-label">标签</label>
                             <div class="tags-input" id="websiteTagsInput">
-                                <input type="text" class="tag-input" placeholder="输入标签后按回车添加">
+                                <input type="text" class="tag-input" placeholder="输入标签后按回车添加，或从下方选择已有标签" autocomplete="off">
+                                <div class="existing-tags-dropdown" style="display: none;">
+                                    <div class="dropdown-header">选择已有标签：</div>
+                                    <div class="existing-tags-list"></div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">常用标签：</small>
+                                <div class="quick-tags" id="quickTagsAdd"></div>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -431,7 +439,15 @@
                         <div class="mb-3">
                             <label for="editWebsiteTags" class="form-label">标签</label>
                             <div class="tags-input" id="editWebsiteTagsInput">
-                                <input type="text" class="tag-input" placeholder="输入标签后按回车添加">
+                                <input type="text" class="tag-input" placeholder="输入标签后按回车添加，或从下方选择已有标签" autocomplete="off">
+                                <div class="existing-tags-dropdown" style="display: none;">
+                                    <div class="dropdown-header">选择已有标签：</div>
+                                    <div class="existing-tags-list"></div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">常用标签：</small>
+                                <div class="quick-tags" id="quickTagsEdit"></div>
                             </div>
                         </div>
                         <div class="mb-3">

@@ -64,7 +64,9 @@ class WebsitesManager {
     setupTagsInputForElement(containerId) {
         const container = document.getElementById(containerId);
         const input = container.querySelector('.tag-input');
+        const dropdown = container.querySelector('.existing-tags-dropdown');
         
+        // 输入事件处理
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -72,8 +74,151 @@ class WebsitesManager {
                 if (tag && !this.hasTag(container, tag)) {
                     this.addTag(container, tag);
                     input.value = '';
+                    this.hideTagsDropdown(container);
+                    this.updateQuickTags(containerId);
                 }
             }
+        });
+        
+        // 输入框获得焦点时显示下拉列表
+        input.addEventListener('focus', () => {
+            this.showTagsDropdown(container);
+        });
+        
+        // 输入框失去焦点时延迟隐藏下拉列表（允许点击下拉项）
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                this.hideTagsDropdown(container);
+            }, 200);
+        });
+        
+        // 输入内容变化时过滤标签
+        input.addEventListener('input', () => {
+            this.filterExistingTags(container, input.value.trim());
+        });
+        
+        // 初始化快速标签
+        this.updateQuickTags(containerId);
+    }
+    
+    /**
+     * 显示已有标签下拉列表
+     */
+    showTagsDropdown(container) {
+        const dropdown = container.querySelector('.existing-tags-dropdown');
+        const input = container.querySelector('.tag-input');
+        
+        this.renderExistingTags(container);
+        dropdown.style.display = 'block';
+        this.filterExistingTags(container, input.value.trim());
+    }
+    
+    /**
+     * 隐藏已有标签下拉列表
+     */
+    hideTagsDropdown(container) {
+        const dropdown = container.querySelector('.existing-tags-dropdown');
+        dropdown.style.display = 'none';
+    }
+    
+    /**
+     * 渲染已有标签列表
+     */
+    renderExistingTags(container) {
+        const tagsList = container.querySelector('.existing-tags-list');
+        const currentTags = this.getTags(container);
+        
+        tagsList.innerHTML = '';
+        
+        if (this.allTags.length === 0) {
+            tagsList.innerHTML = '<div class="text-muted text-center py-2">暂无已有标签</div>';
+            return;
+        }
+        
+        this.allTags.forEach(tag => {
+            const isDisabled = currentTags.includes(tag);
+            const tagButton = document.createElement('button');
+            tagButton.className = `existing-tag-item ${isDisabled ? 'disabled' : ''}`;
+            tagButton.textContent = tag;
+            tagButton.disabled = isDisabled;
+            
+            if (!isDisabled) {
+                tagButton.addEventListener('click', () => {
+                    this.addTag(container, tag);
+                    this.hideTagsDropdown(container);
+                    this.updateQuickTags(container.id);
+                    container.querySelector('.tag-input').focus();
+                });
+            }
+            
+            tagsList.appendChild(tagButton);
+        });
+    }
+    
+    /**
+     * 过滤已有标签
+     */
+    filterExistingTags(container, searchText) {
+        const tagsList = container.querySelector('.existing-tags-list');
+        const tagItems = tagsList.querySelectorAll('.existing-tag-item');
+        
+        tagItems.forEach(item => {
+            const tagText = item.textContent.toLowerCase();
+            const matches = tagText.includes(searchText.toLowerCase());
+            item.style.display = matches ? 'block' : 'none';
+        });
+    }
+    
+    /**
+     * 更新快速标签按钮
+     */
+    updateQuickTags(containerId) {
+        const container = document.getElementById(containerId);
+        const quickTagsId = containerId === 'websiteTagsInput' ? 'quickTagsAdd' : 'quickTagsEdit';
+        const quickTagsContainer = document.getElementById(quickTagsId);
+        const currentTags = this.getTags(container);
+        
+        if (!quickTagsContainer) return;
+        
+        quickTagsContainer.innerHTML = '';
+        
+        // 获取最常用的标签（按使用频率排序）
+        const tagFrequency = {};
+        this.websites.forEach(website => {
+            if (website.tags && Array.isArray(website.tags)) {
+                website.tags.forEach(tag => {
+                    tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
+                });
+            }
+        });
+        
+        const sortedTags = Object.entries(tagFrequency)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 8) // 显示前8个最常用标签
+            .map(([tag]) => tag);
+        
+        if (sortedTags.length === 0) {
+            quickTagsContainer.innerHTML = '<small class="text-muted">暂无常用标签</small>';
+            return;
+        }
+        
+        sortedTags.forEach(tag => {
+            const isDisabled = currentTags.includes(tag);
+            const tagButton = document.createElement('button');
+            tagButton.className = `quick-tag ${isDisabled ? 'disabled' : ''}`;
+            tagButton.textContent = tag;
+            tagButton.disabled = isDisabled;
+            tagButton.type = 'button';
+            
+            if (!isDisabled) {
+                tagButton.addEventListener('click', () => {
+                    this.addTag(container, tag);
+                    this.updateQuickTags(containerId);
+                    container.querySelector('.tag-input').focus();
+                });
+            }
+            
+            quickTagsContainer.appendChild(tagButton);
         });
     }
 
@@ -98,13 +243,19 @@ class WebsitesManager {
         tagItem.className = 'tag-item';
         tagItem.innerHTML = `
             ${tag}
-            <span class="tag-remove" onclick="this.parentElement.remove()">
+            <span class="tag-remove" onclick="this.parentElement.remove(); websitesManager.updateQuickTags('${container.id}'); websitesManager.renderExistingTags(document.getElementById('${container.id}'));">
                 <i class="bi bi-x"></i>
             </span>
         `;
         
         const input = container.querySelector('.tag-input');
         container.insertBefore(tagItem, input);
+        
+        // 更新快速标签和下拉列表状态
+        this.updateQuickTags(container.id);
+        if (container.querySelector('.existing-tags-dropdown').style.display === 'block') {
+            this.renderExistingTags(container);
+        }
     }
 
     /**
