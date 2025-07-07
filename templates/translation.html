@@ -50,6 +50,45 @@
         .status-processing {
             color: #ffc107;
         }
+        /* Translation Progress Styles */
+        .translation-progress {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        .translation-progress h5 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        .progress {
+            height: 20px;
+            border-radius: 10px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .progress-details {
+            font-size: 12px;
+            color: #868e96;
+            margin-top: 8px;
+        }
+        @media (max-width: 768px) {
+            .translation-progress {
+                padding: 15px;
+                margin: 15px 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -282,6 +321,24 @@
                             <button type="button" class="btn btn-outline-secondary ms-2" id="cancelUploadBtn">
                                 <i class="fas fa-times"></i> 取消
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Translation Progress -->
+                <div id="translationProgress" class="translation-progress" style="display: none;">
+                    <div class="progress-header">
+                        <h5>翻译进度</h5>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                        <div class="progress-info">
+                            <div id="progressText" class="progress-text">准备开始翻译...</div>
+                            <div id="progressDetails" class="progress-details"></div>
                         </div>
                     </div>
                 </div>

@@ -915,79 +915,145 @@ class DifyTestApp {
         }
     }
     
+    // PDF翻译相关方法
     async translatePdf() {
-        // Use the selected file from handleFileSelection
-        const file = this.selectedFile;
+        const fileInput = document.getElementById('pdfFile');
+        const file = fileInput.files[0];
         
         if (!file) {
-            this.showAlert('请先选择PDF文件', 'warning');
+            this.showAlert('请选择PDF文件', 'error');
             return;
         }
         
-        if (file.size > 50 * 1024 * 1024) {
-            this.showAlert('文件大小超过50MB限制', 'danger');
-            return;
-        }
-        
+        // 获取翻译配置
         const config = this.getTranslationConfig();
-        if (!config) return;
         
+        // 创建FormData
         const formData = new FormData();
         formData.append('file', file);
         
-        // 将配置参数作为单独的表单字段添加
-        formData.append('provider', config.provider);
-        formData.append('source_language', config.source_language);
-        formData.append('target_language', config.target_language);
-        formData.append('output_format', config.output_format);
-        formData.append('layout', config.layout);
-        
-        if (config.api_key) {
-            formData.append('api_key', config.api_key);
-        }
-        
-        const translateBtn = document.getElementById('startTranslationBtn');
-        const loadingDiv = document.querySelector('.loading-translation');
-        const progressBar = document.querySelector('.progress-bar');
-        
-        if (!translateBtn) {
-            this.showAlert('翻译按钮未找到', 'danger');
-            return;
-        }
-        
-        translateBtn.disabled = true;
-        if (loadingDiv) {
-            loadingDiv.style.display = 'block';
-        }
+        // 添加配置参数
+        Object.keys(config).forEach(key => {
+            formData.append(key, config[key]);
+        });
         
         try {
-            const response = await fetch('/api/translation/translate', {
+            // 显示进度区域
+            this.showTranslationProgress();
+            
+            // 使用流式翻译API
+            const response = await fetch('/api/translation/translate/stream', {
                 method: 'POST',
                 body: formData
             });
             
-            if (response.ok) {
-                const result = await response.json();
-                this.displayTranslationResults(result);
-                this.addToTranslationHistory(file.name, config, result);
-                this.showAlert('PDF translation completed!', 'success');
+            const result = await response.json();
+            
+            if (result.success) {
+                // 开始监听进度
+                this.monitorTranslationProgress(result.task_id);
             } else {
-                const error = await response.json();
-                this.showAlert(`Translation failed: ${error.error}`, 'danger');
+                this.hideTranslationProgress();
+                this.showAlert(`翻译失败: ${result.error}`, 'error');
             }
+            
         } catch (error) {
-            this.showAlert(`Translation failed: ${error.message}`, 'danger');
-        } finally {
-            translateBtn.disabled = false;
-            if (loadingDiv) {
-                loadingDiv.style.display = 'none';
-            }
-            if (progressBar) {
-                progressBar.style.width = '0%';
-            }
+            this.hideTranslationProgress();
+            this.showAlert(`翻译失败: ${error.message}`, 'error');
         }
     }
     
+    // 显示翻译进度
+    showTranslationProgress() {
+        const progressContainer = document.getElementById('translationProgress');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressDetails = document.getElementById('progressDetails');
+        
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '准备开始翻译...';
+        progressDetails.textContent = '';
+        
+        // 隐藏结果区域
+        document.getElementById('translationResult').style.display = 'none';
+    }
+    
+    // 隐藏翻译进度
+    hideTranslationProgress() {
+        const progressContainer = document.getElementById('translationProgress');
+        progressContainer.style.display = 'none';
+    }
+    
+    // 监听翻译进度
+    monitorTranslationProgress(taskId) {
+        // 使用轮询方式获取进度（也可以使用Server-Sent Events）
+        const pollProgress = async () => {
+            try {
+                const response = await fetch(`/api/translation/progress/${taskId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    this.updateProgressDisplay(data);
+                    
+                    // 如果任务完成或失败，停止轮询
+                    if (data.status === 'completed') {
+                        this.handleTranslationComplete(data.result);
+                        return;
+                    } else if (data.status === 'failed' || data.status === 'error') {
+                        this.handleTranslationError(data.error);
+                        return;
+                    }
+                    
+                    // 继续轮询
+                    setTimeout(pollProgress, 1000);
+                } else {
+                    this.handleTranslationError(result.error);
+                }
+            } catch (error) {
+                this.handleTranslationError(error.message);
+            }
+        };
+        
+        // 开始轮询
+        pollProgress();
+    }
+    
+    // 更新进度显示
+    updateProgressDisplay(data) {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressDetails = document.getElementById('progressDetails');
+        
+        // 更新进度条
+        progressBar.style.width = `${data.progress}%`;
+        
+        // 更新进度文本
+        progressText.textContent = data.current_step;
+        
+        // 更新详细信息
+        if (data.total_texts > 0) {
+            progressDetails.textContent = `进度: ${data.completed_texts}/${data.total_texts} 个文本块`;
+        } else {
+            progressDetails.textContent = '';
+        }
+    }
+    
+    // 处理翻译完成
+    handleTranslationComplete(result) {
+        this.hideTranslationProgress();
+        this.displayTranslationResult(result);
+        this.addToTranslationHistory(result);
+        this.showAlert('翻译完成！', 'success');
+    }
+    
+    // 处理翻译错误
+    handleTranslationError(error) {
+        this.hideTranslationProgress();
+        this.showAlert(`翻译失败: ${error}`, 'error');
+    }
+
     getTranslationConfig() {
         const providerElement = document.getElementById('translationProvider');
         const sourceLanguageElement = document.getElementById('sourceLanguage');
