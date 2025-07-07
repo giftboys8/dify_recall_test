@@ -1348,12 +1348,11 @@ class DifyTestApp {
     }
     
     displayTranslationResults(result) {
-        const resultsDiv = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULTS);
-        const infoDiv = document.getElementById(this.ELEMENT_IDS.TRANSLATION_INFO);
-        const linksDiv = document.getElementById(this.ELEMENT_IDS.DOWNLOAD_LINKS);
+        const resultCard = document.getElementById('resultCard');
+        const translationResult = document.getElementById('translationResult');
         
         // Check if required elements exist
-        if (!resultsDiv || !infoDiv || !linksDiv) {
+        if (!resultCard || !translationResult) {
             console.warn('Translation results display elements not found');
             this.showAlert('无法显示翻译结果：页面元素缺失', 'warning');
             return;
@@ -1362,37 +1361,47 @@ class DifyTestApp {
         // Handle the new API response format
         const data = result.data || result;
         
-        infoDiv.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <strong>Processing Time:</strong> ${data.processing_time}s<br>
-                    <strong>Original Text Count:</strong> ${data.original_text_count || 'N/A'}<br>
-                    <strong>Translated Text Count:</strong> ${data.translated_text_count || 'N/A'}
-                </div>
-                <div class="col-md-6">
-                    <strong>Provider:</strong> ${data.provider}<br>
-                    <strong>Input File:</strong> ${data.input_file}<br>
-                    <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}
+        let resultHtml = `
+            <div class="mb-3">
+                <h6><i class="fas fa-info-circle"></i> 翻译信息</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>处理时间:</strong> ${data.processing_time}s<br>
+                        <strong>原文字符数:</strong> ${data.original_text_count || 'N/A'}<br>
+                        <strong>译文字符数:</strong> ${data.translated_text_count || 'N/A'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>翻译提供商:</strong> ${data.provider}<br>
+                        <strong>输入文件:</strong> ${data.input_file}<br>
+                        <strong>完成时间:</strong> ${new Date(data.timestamp).toLocaleString()}
+                    </div>
                 </div>
             </div>
         `;
         
-        let downloadHtml = '';
         if (data.output_files && data.output_files.length > 0) {
+            resultHtml += `
+                <div class="mb-3">
+                    <h6><i class="fas fa-download"></i> 下载文件</h6>
+                    <div class="d-flex flex-wrap gap-2">
+            `;
             data.output_files.forEach(file => {
-                downloadHtml += `
-                    <a href="${file.download_url}" class="btn btn-outline-primary me-2 mb-2" download>
-                        <i class="fas fa-download"></i> Download ${file.filename}
+                resultHtml += `
+                    <a href="${file.download_url}" class="btn btn-outline-primary" download>
+                        <i class="fas fa-download"></i> ${file.filename}
                     </a>
-                    <small class="text-muted d-block mb-2">Size: ${(file.size / 1024).toFixed(1)} KB</small>
                 `;
             });
+            resultHtml += `
+                    </div>
+                </div>
+            `;
         } else {
-            downloadHtml = '<p class="text-muted">No output files available for download.</p>';
+            resultHtml += '<div class="alert alert-warning">没有可下载的文件</div>';
         }
         
-        linksDiv.innerHTML = downloadHtml;
-        resultsDiv.style.display = 'block';
+        translationResult.innerHTML = resultHtml;
+        resultCard.style.display = 'block';
     }
     
     addToTranslationHistory(fileName, config, result) {
