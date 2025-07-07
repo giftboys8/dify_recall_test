@@ -5,6 +5,27 @@ class DifyTestApp {
         this.testCases = [];
         this.testResults = [];
         this.config = {};
+        
+        // Element ID constants for better maintainability
+        this.ELEMENT_IDS = {
+            PDF_FILE_INPUT: 'pdfFileInput',
+            START_TRANSLATION_BTN: 'startTranslationBtn',
+            TRANSLATION_PROGRESS: 'translationProgress',
+            PROGRESS_BAR: 'progressBar',
+            PROGRESS_TEXT: 'progressText',
+            PROGRESS_DETAILS: 'progressDetails',
+            TRANSLATION_RESULT: 'translationResult',
+            TRANSLATION_RESULTS: 'translationResults',
+            TRANSLATION_INFO: 'translationInfo',
+            DOWNLOAD_LINKS: 'downloadLinks',
+            HISTORY_TABLE: 'historyTable',
+            FILE_INFO: 'fileInfo',
+            FILE_NAME: 'fileName',
+            FILE_SIZE: 'fileSize',
+            UPLOAD_TIME: 'uploadTime',
+            UPLOAD_AREA: 'uploadArea'
+        };
+        
         this.init();
     }
 
@@ -917,16 +938,40 @@ class DifyTestApp {
     
     // PDF翻译相关方法
     async translatePdf() {
-        const fileInput = document.getElementById('pdfFile');
-        const file = fileInput.files[0];
+        const fileInput = document.getElementById(this.ELEMENT_IDS.PDF_FILE_INPUT);
+        
+        if (!fileInput) {
+            this.showAlert('文件输入元素未找到，请刷新页面重试', 'error');
+            console.error('PDF file input element not found');
+            return;
+        }
+        
+        const file = fileInput.files && fileInput.files[0];
         
         if (!file) {
-            this.showAlert('请选择PDF文件', 'error');
+            this.showAlert('请先选择PDF文件', 'warning');
+            return;
+        }
+        
+        // 验证文件类型
+        if (file.type !== 'application/pdf') {
+            this.showAlert('请选择有效的PDF文件', 'error');
+            return;
+        }
+        
+        // 验证文件大小 (50MB limit)
+        const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+        if (file.size > maxSize) {
+            this.showAlert('文件大小不能超过50MB', 'error');
             return;
         }
         
         // 获取翻译配置
         const config = this.getTranslationConfig();
+        if (!config) {
+            this.showAlert('翻译配置无效，请检查设置', 'error');
+            return;
+        }
         
         // 创建FormData
         const formData = new FormData();
@@ -941,11 +986,22 @@ class DifyTestApp {
             // 显示进度区域
             this.showTranslationProgress();
             
+            // 禁用翻译按钮防止重复提交
+            const translateBtn = document.getElementById(this.ELEMENT_IDS.START_TRANSLATION_BTN);
+            if (translateBtn) {
+                translateBtn.disabled = true;
+                translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 翻译中...';
+            }
+            
             // 使用流式翻译API
             const response = await fetch('/api/translation/translate/stream', {
                 method: 'POST',
                 body: formData
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const result = await response.json();
             
@@ -953,36 +1009,43 @@ class DifyTestApp {
                 // 开始监听进度
                 this.monitorTranslationProgress(result.task_id);
             } else {
-                this.hideTranslationProgress();
-                this.showAlert(`翻译失败: ${result.error}`, 'error');
+                this.handleTranslationError(result.error || '未知错误');
             }
             
         } catch (error) {
-            this.hideTranslationProgress();
-            this.showAlert(`翻译失败: ${error.message}`, 'error');
+            console.error('Translation error:', error);
+            this.handleTranslationError(error.message || '网络连接错误');
         }
     }
     
     // 显示翻译进度
     showTranslationProgress() {
-        const progressContainer = document.getElementById('translationProgress');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-        const progressDetails = document.getElementById('progressDetails');
+        const progressContainer = document.getElementById(this.ELEMENT_IDS.TRANSLATION_PROGRESS);
+        const progressBar = document.getElementById(this.ELEMENT_IDS.PROGRESS_BAR);
+        const progressText = document.getElementById(this.ELEMENT_IDS.PROGRESS_TEXT);
+        const progressDetails = document.getElementById(this.ELEMENT_IDS.PROGRESS_DETAILS);
         
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressText.textContent = '准备开始翻译...';
-        progressDetails.textContent = '';
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (progressBar) progressBar.style.width = '0%';
+        if (progressText) progressText.textContent = '准备开始翻译...';
+        if (progressDetails) progressDetails.textContent = '';
         
         // 隐藏结果区域
-        document.getElementById('translationResult').style.display = 'none';
+        const resultElement = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULT);
+        if (resultElement) resultElement.style.display = 'none';
     }
     
     // 隐藏翻译进度
     hideTranslationProgress() {
-        const progressContainer = document.getElementById('translationProgress');
-        progressContainer.style.display = 'none';
+        const progressContainer = document.getElementById(this.ELEMENT_IDS.TRANSLATION_PROGRESS);
+        if (progressContainer) progressContainer.style.display = 'none';
+        
+        // 重新启用翻译按钮
+        const translateBtn = document.getElementById(this.ELEMENT_IDS.START_TRANSLATION_BTN);
+        if (translateBtn) {
+            translateBtn.disabled = false;
+            translateBtn.innerHTML = '<i class="fas fa-language"></i> 开始翻译';
+        }
     }
     
     // 监听翻译进度
@@ -1022,21 +1085,28 @@ class DifyTestApp {
     
     // 更新进度显示
     updateProgressDisplay(data) {
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-        const progressDetails = document.getElementById('progressDetails');
+        const progressBar = document.getElementById(this.ELEMENT_IDS.PROGRESS_BAR);
+        const progressText = document.getElementById(this.ELEMENT_IDS.PROGRESS_TEXT);
+        const progressDetails = document.getElementById(this.ELEMENT_IDS.PROGRESS_DETAILS);
         
         // 更新进度条
-        progressBar.style.width = `${data.progress}%`;
+        if (progressBar && typeof data.progress === 'number') {
+            progressBar.style.width = `${Math.min(100, Math.max(0, data.progress))}%`;
+            progressBar.setAttribute('aria-valuenow', data.progress);
+        }
         
         // 更新进度文本
-        progressText.textContent = data.current_step;
+        if (progressText && data.current_step) {
+            progressText.textContent = data.current_step;
+        }
         
         // 更新详细信息
-        if (data.total_texts > 0) {
-            progressDetails.textContent = `进度: ${data.completed_texts}/${data.total_texts} 个文本块`;
-        } else {
-            progressDetails.textContent = '';
+        if (progressDetails) {
+            if (data.total_texts > 0) {
+                progressDetails.textContent = `进度: ${data.completed_texts || 0}/${data.total_texts} 个文本块`;
+            } else {
+                progressDetails.textContent = data.details || '';
+            }
         }
     }
     
@@ -1050,8 +1120,41 @@ class DifyTestApp {
     
     // 处理翻译错误
     handleTranslationError(error) {
+        console.error('Translation error:', error);
         this.hideTranslationProgress();
-        this.showAlert(`翻译失败: ${error}`, 'error');
+        
+        // 获取错误信息
+        let errorMessage = '未知错误';
+        if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (error && error.message) {
+            errorMessage = error.message;
+        } else if (error && error.error) {
+            errorMessage = error.error;
+        }
+        
+        // 显示错误信息
+        const resultDiv = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULT);
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> 翻译失败</h5>
+                    <p><strong>错误信息:</strong> ${this.escapeHtml(errorMessage)}</p>
+                    <small class="text-muted">请检查文件格式、网络连接或翻译配置后重试。</small>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+        // 显示简短的错误提示
+        this.showAlert(`翻译失败: ${errorMessage}`, 'error');
+    }
+    
+    // HTML转义函数
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     getTranslationConfig() {
@@ -1143,10 +1246,10 @@ class DifyTestApp {
         this.selectedFile = file;
         
         // Update UI to show file info
-        const fileInfo = document.getElementById('fileInfo');
-        const fileName = document.getElementById('fileName');
-        const fileSize = document.getElementById('fileSize');
-        const uploadTime = document.getElementById('uploadTime');
+        const fileInfo = document.getElementById(this.ELEMENT_IDS.FILE_INFO);
+        const fileName = document.getElementById(this.ELEMENT_IDS.FILE_NAME);
+        const fileSize = document.getElementById(this.ELEMENT_IDS.FILE_SIZE);
+        const uploadTime = document.getElementById(this.ELEMENT_IDS.UPLOAD_TIME);
         
         if (fileInfo && fileName && fileSize && uploadTime) {
             fileName.textContent = file.name;
@@ -1156,7 +1259,7 @@ class DifyTestApp {
         }
         
         // Hide upload area and show file info
-        const uploadArea = document.getElementById('uploadArea');
+        const uploadArea = document.getElementById(this.ELEMENT_IDS.UPLOAD_AREA);
         if (uploadArea) {
             uploadArea.style.display = 'none';
         }
@@ -1169,14 +1272,14 @@ class DifyTestApp {
         this.selectedFile = null;
         
         // Reset file input
-        const pdfFileInput = document.getElementById('pdfFileInput');
+        const pdfFileInput = document.getElementById(this.ELEMENT_IDS.PDF_FILE_INPUT);
         if (pdfFileInput) {
             pdfFileInput.value = '';
         }
         
         // Hide file info and show upload area
-        const fileInfo = document.getElementById('fileInfo');
-        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById(this.ELEMENT_IDS.FILE_INFO);
+        const uploadArea = document.getElementById(this.ELEMENT_IDS.UPLOAD_AREA);
         
         if (fileInfo) {
             fileInfo.style.display = 'none';
@@ -1239,13 +1342,14 @@ class DifyTestApp {
     }
     
     displayTranslationResults(result) {
-        const resultsDiv = document.getElementById('translationResults');
-        const infoDiv = document.getElementById('translationInfo');
-        const linksDiv = document.getElementById('downloadLinks');
+        const resultsDiv = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULTS);
+        const infoDiv = document.getElementById(this.ELEMENT_IDS.TRANSLATION_INFO);
+        const linksDiv = document.getElementById(this.ELEMENT_IDS.DOWNLOAD_LINKS);
         
         // Check if required elements exist
         if (!resultsDiv || !infoDiv || !linksDiv) {
             console.warn('Translation results display elements not found');
+            this.showAlert('无法显示翻译结果：页面元素缺失', 'warning');
             return;
         }
         
@@ -1286,7 +1390,7 @@ class DifyTestApp {
     }
     
     addToTranslationHistory(fileName, config, result) {
-        const historyTableElement = document.getElementById('historyTable');
+        const historyTableElement = document.getElementById(this.ELEMENT_IDS.HISTORY_TABLE);
         if (!historyTableElement) {
             console.warn('Translation history table not found');
             return;
@@ -1332,7 +1436,7 @@ class DifyTestApp {
             return;
         }
         
-        const historyTableElement = document.getElementById('historyTable');
+        const historyTableElement = document.getElementById(this.ELEMENT_IDS.HISTORY_TABLE);
         if (!historyTableElement) {
             console.warn('Translation history table not found');
             return;
@@ -1456,7 +1560,7 @@ class DifyTestApp {
         }
         
         // Clear file input
-        const pdfFile = document.getElementById('pdfFile');
+        const pdfFile = document.getElementById('pdfFileInput');
         if (pdfFile) {
             pdfFile.value = '';
         }
