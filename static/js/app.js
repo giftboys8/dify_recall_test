@@ -1116,7 +1116,6 @@ class DifyTestApp {
         this.hideTranslationProgress();
         this.displayTranslationResults(result);
         
-'
         // 获取文件名和配置信息
         const data = result; // result已经是翻译结果数据
         const fileName = data.input_file || this.selectedFile?.name || '未知文件';
