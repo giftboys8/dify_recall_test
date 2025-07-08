@@ -23,7 +23,8 @@ class DifyTestApp {
             FILE_NAME: 'fileName',
             FILE_SIZE: 'fileSize',
             UPLOAD_TIME: 'uploadTime',
-            UPLOAD_AREA: 'uploadArea'
+            UPLOAD_AREA: 'uploadArea',
+            RESULT_CARD: 'resultCard'
         };
         
         this.init();
@@ -1348,7 +1349,7 @@ class DifyTestApp {
     }
     
     displayTranslationResults(result) {
-        const resultCard = document.getElementById('resultCard');
+        const resultCard = document.getElementById(this.ELEMENT_IDS.RESULT_CARD);
         const translationResult = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULT);
         
         // Check if required elements exist
