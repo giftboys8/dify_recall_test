@@ -1116,12 +1116,15 @@ class DifyTestApp {
         this.hideTranslationProgress();
         this.displayTranslationResults(result);
         
+'
         // 获取文件名和配置信息
-        const data = result.data || result;
+        const data = result; // result已经是翻译结果数据
         const fileName = data.input_file || this.selectedFile?.name || '未知文件';
         const config = this.getTranslationConfig() || {};
         
-        this.addToTranslationHistory(fileName, config, result);
+        // 为了保持与addToTranslationHistory的兼容性，包装result
+        const wrappedResult = { success: true, data: result };
+        this.addToTranslationHistory(fileName, config, wrappedResult);
         this.showAlert('翻译完成！', 'success');
     }
     
@@ -1359,8 +1362,8 @@ class DifyTestApp {
             return;
         }
         
-        // Handle the new API response format
-        const data = result.data || result;
+        // Handle the translation result data
+        const data = result; // result is already the translation result data
         
         let resultHtml = `
             <div class="mb-3">
