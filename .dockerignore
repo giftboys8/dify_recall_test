@@ -1,0 +1,104 @@
+# Git相关
+.git
+.gitignore
+
+# Python缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE相关
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统相关
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+
+# 测试相关
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# 文档
+docs/_build/
+
+# 临时文件
+*.tmp
+*.temp
+temp_*
+
+# 数据库文件（开发时的本地数据库）
+*.db
+*.sqlite
+*.sqlite3
+
+# 上传的文件（在容器中会重新挂载）
+uploads/
+data/input/
+data/output/
+
+# 配置文件中的敏感信息
+.env
+*.key
+*.pem
+*.crt
+
+# Node.js相关（如果有前端构建）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker相关
+Dockerfile.dev
+docker-compose.override.yml
+docker-compose.dev.yaml
+
+# 其他
+.dockerignore
+README.md
+LICENSE
+*.md

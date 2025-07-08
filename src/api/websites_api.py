@@ -117,6 +117,14 @@ class WebsitesAPI:
                         'error': 'URL格式无效'
                     }), 400
                 
+                # 处理accounts数据
+                accounts = []
+                for acc_data in data.get('accounts', []):
+                    if isinstance(acc_data, dict):
+                        accounts.append(WebsiteAccount(**acc_data))
+                    else:
+                        accounts.append(acc_data)
+                
                 # 创建网站对象
                 website = Website(
                     url=url,
@@ -124,7 +132,7 @@ class WebsitesAPI:
                     description=data.get('description', '').strip(),
                     tags=data.get('tags', []),
                     favicon_url=data.get('favicon_url', '').strip(),
-                    accounts=data.get('accounts', [])
+                    accounts=accounts
                 )
                 
                 # 添加网站
@@ -198,7 +206,14 @@ class WebsitesAPI:
                     update_data['tags'] = data['tags']
                 
                 if 'accounts' in data and isinstance(data['accounts'], list):
-                    update_data['accounts'] = data['accounts']
+                    # 处理accounts数据
+                    accounts = []
+                    for acc_data in data['accounts']:
+                        if isinstance(acc_data, dict):
+                            accounts.append(WebsiteAccount(**acc_data))
+                        else:
+                            accounts.append(acc_data)
+                    update_data['accounts'] = accounts
                 
                 # 执行更新
                 success = self.websites_manager.update_website(website_id, **update_data)

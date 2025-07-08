@@ -1,0 +1,71 @@
+version: '3.8'
+
+# 开发环境覆盖配置
+# 使用方法: docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up
+
+services:
+  kb-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # 挂载源代码以支持热重载
+      - ./src:/app/src
+      - ./main.py:/app/main.py
+      - ./web_interface.py:/app/web_interface.py
+      - ./quick_start.py:/app/quick_start.py
+      # 保持数据持久化
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./static:/app/static
+      - ./templates:/app/templates
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=1
+      - LOG_LEVEL=DEBUG
+      - PYTHONPATH=/app/src
+      - TOKENIZERS_PARALLELISM=false
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    command: >
+      sh -c "pip install watchdog &&
+             python main.py web --host 0.0.0.0 --port 8080"
+    ports:
+      - "5000:5000"   # Flask API
+      - "8080:8080"   # Web服务器
+      - "8501:8501"   # Streamlit界面
+      - "8888:8888"   # Jupyter Notebook (可选)
+    stdin_open: true
+    tty: true
+
+  # 开发工具容器（可选）
+  dev-tools:
+    build: .
+    container_name: kb-dev-tools
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app/src
+    command: tail -f /dev/null
+    networks:
+      - kb-network
+    profiles:
+      - tools
+
+  # 数据库管理界面（可选）
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: kb-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - kb-network
+    profiles:
+      - tools

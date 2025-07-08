@@ -93,7 +93,41 @@
 
 ## 🚀 快速开始
 
-### 1. 安装依赖
+### 方式一：Docker 部署（推荐）
+
+#### 1. 生产环境部署
+
+```bash
+# 克隆项目
+git clone <repository-url>
+cd kb
+
+# 启动所有服务
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+```
+
+#### 2. 开发环境部署
+
+```bash
+# 使用开发环境配置
+docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d
+```
+
+#### 3. 访问服务
+
+- **主应用**: http://localhost:8080
+- **API服务**: http://localhost:5000
+- **Streamlit界面**: http://localhost:8501
+- **Redis管理**: http://localhost:8081 (开发环境)
+
+详细的Docker部署说明请参考 [DOCKER.md](DOCKER.md)
+
+### 方式二：本地安装
+
+#### 1. 安装依赖
 
 ```bash
 # 使用安装脚本

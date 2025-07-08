@@ -120,7 +120,7 @@ class WebsitesManager:
                     website.description,
                     json.dumps(website.tags, ensure_ascii=False),
                     website.favicon_url,
-                    json.dumps([asdict(acc) for acc in website.accounts], ensure_ascii=False),
+                    json.dumps([asdict(acc) if isinstance(acc, WebsiteAccount) else acc for acc in website.accounts], ensure_ascii=False),
                     website.created_at,
                     website.updated_at,
                     website.visit_count,

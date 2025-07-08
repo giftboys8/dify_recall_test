@@ -1,6 +1,6 @@
 # Makefile for Dify KB Recall Testing Tool
 
-.PHONY: help install install-dev test test-unit test-integration lint format clean build run-test run-web setup
+.PHONY: help install install-dev test test-unit test-integration lint format clean build run-test run-web setup docker-build docker-up docker-down docker-dev docker-logs docker-clean docker-restart docker-shell docker-status
 
 # Default target
 help:
@@ -17,6 +17,14 @@ help:
 	@echo "  run-test     - Run recall testing"
 	@echo "  run-web      - Start web interface"
 	@echo "  setup        - Initial project setup"
+	@echo ""
+	@echo "Docker targets:"
+	@echo "  docker-build - Build Docker image"
+	@echo "  docker-up    - Start all services with Docker Compose"
+	@echo "  docker-down  - Stop all Docker services"
+	@echo "  docker-dev   - Start development environment"
+	@echo "  docker-logs  - View Docker logs"
+	@echo "  docker-clean - Clean Docker images and volumes"
 
 # Installation
 install:
@@ -75,9 +83,46 @@ dev-server:
 quick-test:
 	python main.py quick-start
 
-# Docker targets (if needed)
+# Docker targets
 docker-build:
-	docker build -t dify-kb-tester .
+	@echo "Building Docker image..."
+	docker-compose build
 
-docker-run:
-	docker run -p 8080:8080 dify-kb-tester
+docker-up:
+	@echo "Starting all services..."
+	docker-compose up -d
+	@echo "Services started. Access the application at:"
+	@echo "  - Main app: http://localhost:8080"
+	@echo "  - API: http://localhost:5000"
+	@echo "  - Streamlit: http://localhost:8501"
+
+docker-down:
+	@echo "Stopping all services..."
+	docker-compose down
+
+docker-dev:
+	@echo "Starting development environment..."
+	docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d
+	@echo "Development environment started with hot reload enabled"
+
+docker-logs:
+	@echo "Viewing application logs..."
+	docker-compose logs -f kb-app
+
+docker-clean:
+	@echo "Cleaning Docker images and volumes..."
+	docker-compose down -v
+	docker system prune -f
+	docker volume prune -f
+
+docker-restart:
+	@echo "Restarting application..."
+	docker-compose restart kb-app
+
+docker-shell:
+	@echo "Opening shell in application container..."
+	docker-compose exec kb-app bash
+
+docker-status:
+	@echo "Docker services status:"
+	docker-compose ps

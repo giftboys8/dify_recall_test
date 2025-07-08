@@ -1,0 +1,64 @@
+services:
+  kb-app:
+    build: .
+    container_name: kb-app
+    ports:
+      - "5001:5001"   # Flask API
+      - "8082:8082"   # Web服务器
+      - "8501:8501"   # Streamlit界面
+    volumes:
+      - kb_data:/app/data
+      - kb_uploads:/app/uploads
+      - kb_config:/app/config
+      - kb_logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app/src
+      - TOKENIZERS_PARALLELISM=false
+    restart: unless-stopped
+    # 移除了对redis的依赖
+    networks:
+      - kb-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis和Nginx服务已移除，因为当前项目不需要这些服务
+  # 应用直接通过Flask在8082端口提供web服务
+
+volumes:
+  kb_data:
+    driver: local
+  kb_uploads:
+    driver: local
+  kb_config:
+    driver: local
+  kb_logs:
+    driver: local
+
+networks:
+  kb-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# 开发环境覆盖配置
+# 使用: docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up
+# docker-compose.dev.yaml 内容建议:
+# version: '3.8'
+# services:
+#   kb-app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.dev
+#     volumes:
+#       - .:/app
+#     environment:
+#       - DEBUG=1
+#       - LOG_LEVEL=DEBUG
+#     command: python main.py web --host 0.0.0.0 --port 8080 --debug
