@@ -1349,7 +1349,7 @@ class DifyTestApp {
     
     displayTranslationResults(result) {
         const resultCard = document.getElementById('resultCard');
-        const translationResult = document.getElementById('translationResult');
+        const translationResult = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULT);
         
         // Check if required elements exist
         if (!resultCard || !translationResult) {
@@ -1545,7 +1545,7 @@ class DifyTestApp {
         }
         
         // Hide translation results panel
-        const translationResults = document.getElementById('translationResults');
+        const translationResults = document.getElementById(this.ELEMENT_IDS.TRANSLATION_RESULTS);
         if (translationResults) {
             translationResults.style.display = 'none';
         }
