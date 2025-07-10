@@ -19,8 +19,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 from dataclasses import asdict
+from functools import wraps
+import hashlib
+import secrets
 
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 from flask_cors import CORS
 
 # Import the testing modules and utilities
@@ -111,7 +114,20 @@ class WebInterface:
         self.app = Flask(__name__, 
                         template_folder=template_folder,
                         static_folder=static_folder)
+        
+        # 配置会话
+        self.app.secret_key = secrets.token_hex(32)
+        self.app.config['SESSION_COOKIE_SECURE'] = False  # 开发环境设为False
+        self.app.config['SESSION_COOKIE_HTTPONLY'] = True
+        self.app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+        
         CORS(self.app)
+        
+        # 默认用户配置（实际应用中应该从数据库或配置文件读取）
+        self.users = {
+            'admin': self._hash_password('admin123'),
+            'user': self._hash_password('user123')
+        }
         
         # Register blueprints
         self._register_blueprints()
@@ -127,6 +143,25 @@ class WebInterface:
         self.db_manager = UnifiedDatabaseManager()
         
         self.logger.info("Web interface initialized")
+    
+    def _hash_password(self, password: str) -> str:
+        """哈希密码"""
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def _verify_password(self, password: str, hashed: str) -> bool:
+        """验证密码"""
+        return self._hash_password(password) == hashed
+    
+    def _login_required(self, f):
+        """登录验证装饰器"""
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                if request.is_json:
+                    return jsonify({'success': False, 'error': '需要登录', 'redirect': '/login'}), 401
+                return redirect(url_for('login'))
+            return f(*args, **kwargs)
+        return decorated_function
     
     def _register_blueprints(self):
         """Register Flask blueprints."""
@@ -155,37 +190,77 @@ class WebInterface:
     def _setup_routes(self):
         """Setup Flask routes."""
         
+        @self.app.route('/login')
+        def login():
+            """Login page."""
+            if 'user_id' in session:
+                return redirect(url_for('index'))
+            return render_template('login.html')
+        
+        @self.app.route('/api/auth/login', methods=['POST'])
+        def api_login():
+            """Login API."""
+            try:
+                data = request.get_json()
+                username = data.get('username')
+                password = data.get('password')
+                
+                if not username or not password:
+                    return jsonify({'success': False, 'error': '用户名和密码不能为空'}), 400
+                
+                if username in self.users and self._verify_password(password, self.users[username]):
+                    session['user_id'] = username
+                    session.permanent = True
+                    return jsonify({'success': True, 'message': '登录成功'})
+                else:
+                    return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
+            except Exception as e:
+                return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @self.app.route('/api/auth/logout', methods=['POST'])
+        def api_logout():
+            """Logout API."""
+            session.clear()
+            return jsonify({'success': True, 'message': '已退出登录'})
+        
         @self.app.route('/')
+        @self._login_required
         def index():
             """Main page."""
             return render_template('index.html')
         
         @self.app.route('/recall')
+        @self._login_required
         def recall():
             """Recall testing page."""
             return render_template('recall.html')
         
         @self.app.route('/translation')
+        @self._login_required
         def translation():
             """PDF translation page."""
             return render_template('translation.html')
         
         @self.app.route('/ideas')
+        @self._login_required
         def ideas():
             """Ideas page."""
             return render_template('ideas.html')
         
         @self.app.route('/documents')
+        @self._login_required
         def documents():
             """Document learning page."""
             return render_template('documents.html')
         
         @self.app.route('/websites')
+        @self._login_required
         def websites():
             """Websites management page."""
             return render_template('websites.html')
         
         @self.app.route('/api/config', methods=['GET', 'POST'])
+        @self._login_required
         def config_api():
             """Configuration API."""
             if request.method == 'GET':
@@ -210,6 +285,7 @@ class WebInterface:
                     return jsonify({'success': False, 'error': str(e)}), 400
         
         @self.app.route('/api/test-cases', methods=['GET', 'POST'])
+        @self._login_required
         def test_cases_api():
             """Test cases API."""
             if request.method == 'GET':
@@ -264,12 +340,14 @@ class WebInterface:
                     return jsonify({'success': False, 'error': str(e)}), 400
         
         @self.app.route('/api/test-cases/clear', methods=['POST'])
+        @self._login_required
         def clear_test_cases():
             """Clear all test cases."""
             self.test_cases = []
             return jsonify({'success': True, 'message': 'Test cases cleared'})
         
         @self.app.route('/api/run-test', methods=['POST'])
+        @self._login_required
         def run_test():
             """Run tests API."""
             try:
@@ -315,6 +393,7 @@ class WebInterface:
                 return jsonify({'success': False, 'error': str(e)}), 500
         
         @self.app.route('/api/results', methods=['GET'])
+        @self._login_required
         def get_results():
             """Get test results."""
             if not self.test_results:
@@ -363,12 +442,14 @@ class WebInterface:
             })
         
         @self.app.route('/api/results/clear', methods=['POST'])
+        @self._login_required
         def clear_results():
             """Clear test results."""
             self.test_results = []
             return jsonify({'success': True, 'message': 'Results cleared'})
         
         @self.app.route('/api/export/<format_type>')
+        @self._login_required
         def export_results(format_type):
             """Export results in specified format."""
             if not self.test_results:
@@ -426,6 +507,7 @@ class WebInterface:
         
         # Document Learning API Routes
         @self.app.route('/api/documents', methods=['GET', 'POST'])
+        @self._login_required
         def documents_api():
             """Documents management API."""
             if request.method == 'GET':
@@ -553,6 +635,7 @@ class WebInterface:
                     return jsonify({'success': False, 'error': str(e)}), 500
         
         @self.app.route('/api/documents/<doc_id>', methods=['DELETE'])
+        @self._login_required
         def delete_document(doc_id):
             """Delete a document and its associated data."""
             try:
@@ -604,6 +687,7 @@ class WebInterface:
                 return jsonify({'success': False, 'error': str(e)}), 500
         
         @self.app.route('/api/documents/<doc_id>/notes', methods=['GET', 'POST', 'PUT'])
+        @self._login_required
         def document_notes_api(doc_id):
             """Document notes API."""
             if request.method == 'GET':
@@ -628,6 +712,7 @@ class WebInterface:
                     return jsonify({'success': False, 'error': str(e)}), 500
         
         @self.app.route('/api/documents/<doc_id>/annotations', methods=['GET', 'POST'])
+        @self._login_required
         def document_annotations_api(doc_id):
             """Document annotations API."""
             if request.method == 'GET':
@@ -650,6 +735,7 @@ class WebInterface:
                     return jsonify({'success': False, 'error': str(e)}), 500
         
         @self.app.route('/api/documents/<path:doc_id>/view')
+        @self._login_required
         def view_document(doc_id):
             """View document content."""
             try:

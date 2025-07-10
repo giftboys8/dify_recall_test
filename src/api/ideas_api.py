@@ -13,8 +13,9 @@ Date: 2025-01-02
 import json
 import tempfile
 from datetime import datetime
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, session
 from typing import Dict, Any
+from functools import wraps
 
 try:
     from ..core.ideas_manager import IdeasManager, Idea
@@ -35,8 +36,21 @@ logger = get_logger(__name__)
 # Initialize ideas manager
 ideas_manager = IdeasManager()
 
+def login_required(f):
+    """登录验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'error': '请先登录'
+            }), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 @ideas_bp.route('/', methods=['GET'])
+@login_required
 def get_ideas():
     """Get all ideas with optional filters."""
     try:
@@ -64,6 +78,7 @@ def get_ideas():
 
 
 @ideas_bp.route('/', methods=['POST'])
+@login_required
 def create_idea():
     """Create a new idea."""
     try:
@@ -86,6 +101,7 @@ def create_idea():
 
 
 @ideas_bp.route('/<int:idea_id>', methods=['GET'])
+@login_required
 def get_idea(idea_id):
     """Get a specific idea by ID."""
     try:
@@ -104,6 +120,7 @@ def get_idea(idea_id):
 
 
 @ideas_bp.route('/<int:idea_id>', methods=['PUT'])
+@login_required
 def update_idea(idea_id):
     """Update an existing idea."""
     try:
@@ -129,6 +146,7 @@ def update_idea(idea_id):
 
 
 @ideas_bp.route('/<int:idea_id>', methods=['DELETE'])
+@login_required
 def delete_idea(idea_id):
     """Delete an idea."""
     try:
@@ -147,6 +165,7 @@ def delete_idea(idea_id):
 
 
 @ideas_bp.route('/statistics', methods=['GET'])
+@login_required
 def get_statistics():
     """Get ideas statistics."""
     try:
@@ -162,6 +181,7 @@ def get_statistics():
 
 
 @ideas_bp.route('/export/<format_type>', methods=['GET'])
+@login_required
 def export_ideas(format_type):
     """Export ideas in specified format."""
     try:
@@ -192,6 +212,7 @@ def export_ideas(format_type):
 
 
 @ideas_bp.route('/import', methods=['POST'])
+@login_required
 def import_ideas():
     """Import ideas from uploaded file."""
     try:
@@ -219,6 +240,7 @@ def import_ideas():
 
 
 @ideas_bp.route('/batch', methods=['POST'])
+@login_required
 def batch_operations():
     """Perform batch operations on ideas."""
     try:
@@ -273,6 +295,7 @@ def batch_operations():
 
 
 @ideas_bp.route('/categories', methods=['GET'])
+@login_required
 def get_categories():
     """Get all unique categories."""
     try:
@@ -294,6 +317,7 @@ def get_categories():
 
 
 @ideas_bp.route('/tags', methods=['GET'])
+@login_required
 def get_tags():
     """Get all unique tags."""
     try:

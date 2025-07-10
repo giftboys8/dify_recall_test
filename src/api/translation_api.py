@@ -14,9 +14,10 @@ from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
 from queue import Queue
 
-from flask import Blueprint, request, jsonify, send_file, current_app, Response, stream_template
+from flask import Blueprint, request, jsonify, send_file, current_app, Response, stream_template, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
+from functools import wraps
 
 from ..translation.processor import BatchProcessor, ProcessingConfig
 from ..translation.translator import TranslationEngine
@@ -36,6 +37,18 @@ progress_storage = {}
 # 配置常量
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 ALLOWED_EXTENSIONS = {'pdf'}
+
+def login_required(f):
+    """登录验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'error': '请先登录'
+            }), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 def allowed_file(filename: str) -> bool:
     """检查文件类型是否允许"""
@@ -61,6 +74,7 @@ def validate_file(file: FileStorage) -> tuple[bool, str]:
     return True, ''
 
 @translation_bp.route('/providers', methods=['GET'])
+@login_required
 def get_translation_providers():
     """获取支持的翻译提供商"""
     try:
@@ -87,6 +101,7 @@ def get_translation_providers():
         }), 500
 
 @translation_bp.route('/translate', methods=['POST'])
+@login_required
 def translate_pdf():
     """翻译PDF文件"""
     try:
@@ -383,6 +398,7 @@ def translate_pdf_stream():
 
 
 @translation_bp.route('/progress/<task_id>', methods=['GET'])
+@login_required
 def get_translation_progress(task_id):
     """获取翻译进度"""
     try:
@@ -408,6 +424,7 @@ def get_translation_progress(task_id):
 
 
 @translation_bp.route('/progress/stream/<task_id>')
+@login_required
 def stream_translation_progress(task_id):
     """流式获取翻译进度 (Server-Sent Events)"""
     def generate():
@@ -783,6 +800,7 @@ def cleanup_old_files():
 
 
 @translation_bp.route('/download/<filename>', methods=['GET'])
+@login_required
 def download_file(filename):
     """下载翻译后的文件"""
     try:
@@ -831,6 +849,7 @@ def download_file(filename):
 
 
 @translation_bp.route('/status', methods=['GET'])
+@login_required
 def get_translation_status():
     """获取翻译服务状态"""
     try:
@@ -853,6 +872,7 @@ def get_translation_status():
 
 
 @translation_bp.route('/test', methods=['POST'])
+@login_required
 def test_translation():
     """测试翻译功能"""
     try:
@@ -913,6 +933,7 @@ def test_translation():
 
 
 @translation_bp.route('/config', methods=['POST'])
+@login_required
 def save_translation_config():
     """保存翻译配置"""
     try:
@@ -955,6 +976,7 @@ def save_translation_config():
 
 
 @translation_bp.route('/config', methods=['GET'])
+@login_required
 def load_translation_config():
     """加载翻译配置"""
     try:

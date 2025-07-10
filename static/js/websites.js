@@ -8,6 +8,16 @@ class WebsitesManager {
         this.websites = [];
         this.allTags = [];
         this.currentEditId = null;
+        this.pagination = {
+            page: 1,
+            pageSize: 20,
+            total: 0,
+            totalPages: 0
+        };
+        this.currentQuery = {
+            search: '',
+            tags: []
+        };
         this.init();
     }
 
@@ -290,15 +300,40 @@ class WebsitesManager {
     /**
      * 加载网站列表
      */
-    async loadWebsites() {
+    async loadWebsites(page = 1, resetPagination = true) {
         try {
             this.showLoading();
-            const response = await fetch('/api/websites');
+            
+            // 构建请求URL
+            const params = new URLSearchParams();
+            params.append('limit', this.pagination.pageSize);
+            params.append('offset', (page - 1) * this.pagination.pageSize);
+            
+            if (this.currentQuery.search) {
+                params.append('q', this.currentQuery.search);
+            }
+            
+            this.currentQuery.tags.forEach(tag => {
+                params.append('tags', tag);
+            });
+            
+            const response = await fetch(`/api/websites?${params.toString()}`);
             const result = await response.json();
             
             if (result.success) {
                 this.websites = result.data;
+                
+                if (resetPagination && result.pagination) {
+                    this.pagination = {
+                        page: result.pagination.page,
+                        pageSize: result.pagination.page_size,
+                        total: result.pagination.total,
+                        totalPages: result.pagination.total_pages
+                    };
+                }
+                
                 this.renderWebsites(this.websites);
+                this.renderPagination();
                 this.updateStats();
             } else {
                 this.showError('加载网站列表失败: ' + result.error);
@@ -437,6 +472,104 @@ class WebsitesManager {
     }
 
     /**
+     * 渲染分页控件
+     */
+    renderPagination() {
+        const paginationContainer = document.getElementById('paginationContainer');
+        if (!paginationContainer) return;
+        
+        const { page, totalPages, total } = this.pagination;
+        
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
+        
+        let paginationHtml = '<nav aria-label="网站列表分页">';
+        paginationHtml += '<ul class="pagination justify-content-center mb-0">';
+        
+        // 上一页按钮
+         paginationHtml += `
+             <li class="page-item ${page <= 1 ? 'disabled' : ''}">
+                 <a class="page-link" href="#" onclick="websitesManager.goToPage(${page - 1}); return false;">
+                     <i class="bi bi-chevron-left"></i> 上一页
+                 </a>
+             </li>
+         `;
+        
+        // 页码按钮
+        const startPage = Math.max(1, page - 2);
+        const endPage = Math.min(totalPages, page + 2);
+        
+        if (startPage > 1) {
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="websitesManager.goToPage(1); return false;">1</a>
+                </li>
+            `;
+            if (startPage > 2) {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `
+                <li class="page-item ${i === page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="websitesManager.goToPage(${i}); return false;">${i}</a>
+                </li>
+            `;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationHtml += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="websitesManager.goToPage(${totalPages}); return false;">${totalPages}</a>
+                </li>
+            `;
+        }
+        
+        // 下一页按钮
+         paginationHtml += `
+             <li class="page-item ${page >= totalPages ? 'disabled' : ''}">
+                 <a class="page-link" href="#" onclick="websitesManager.goToPage(${page + 1}); return false;">
+                     下一页 <i class="bi bi-chevron-right"></i>
+                 </a>
+             </li>
+         `;
+        
+        paginationHtml += '</ul>';
+        paginationHtml += '</nav>';
+        
+        // 添加分页信息
+        const startItem = (page - 1) * this.pagination.pageSize + 1;
+        const endItem = Math.min(page * this.pagination.pageSize, total);
+        paginationHtml += `
+            <div class="text-center mt-2">
+                <small class="text-muted">
+                    显示第 ${startItem} - ${endItem} 条，共 ${total} 条记录
+                </small>
+            </div>
+        `;
+        
+        paginationContainer.innerHTML = paginationHtml;
+    }
+
+    /**
+     * 跳转到指定页面
+     */
+    async goToPage(page) {
+        if (page < 1 || page > this.pagination.totalPages || page === this.pagination.page) {
+            return;
+        }
+        
+        this.pagination.page = page;
+        await this.loadWebsites(page, false);
+    }
+
+    /**
      * 更新统计信息
      */
     updateStats() {
@@ -447,7 +580,9 @@ class WebsitesManager {
         const recentlyAddedEl = document.getElementById('recentlyAdded');
         
         if (totalWebsitesEl) {
-            totalWebsitesEl.textContent = this.websites.length;
+            // 使用分页信息中的总数，如果没有则使用当前页面的数据
+            const totalWebsites = this.pagination.total || this.websites.length;
+            totalWebsitesEl.textContent = totalWebsites;
         }
         
         if (totalTagsEl) {
@@ -481,41 +616,12 @@ class WebsitesManager {
         const selectedTags = Array.from(document.getElementById('tagFilter').selectedOptions)
                                  .map(option => option.value);
         
-        if (!query && selectedTags.length === 0) {
-            this.renderWebsites(this.websites);
-            return;
-        }
+        // 更新当前查询条件
+        this.currentQuery.search = query;
+        this.currentQuery.tags = selectedTags;
         
-        try {
-            this.showLoading();
-            
-            let url = '/api/websites?';
-            const params = new URLSearchParams();
-            
-            if (query) {
-                params.append('q', query);
-            }
-            
-            selectedTags.forEach(tag => {
-                params.append('tags', tag);
-            });
-            
-            url += params.toString();
-            
-            const response = await fetch(url);
-            const result = await response.json();
-            
-            if (result.success) {
-                this.renderWebsites(result.data);
-            } else {
-                this.showError('搜索失败: ' + result.error);
-            }
-        } catch (error) {
-            console.error('搜索失败:', error);
-            this.showError('搜索失败: ' + error.message);
-        } finally {
-            this.hideLoading();
-        }
+        // 重置到第一页并加载数据
+        await this.loadWebsites(1, true);
     }
 
     /**

@@ -6,7 +6,8 @@
 
 import json
 import logging
-from flask import Blueprint, request, jsonify
+from functools import wraps
+from flask import Blueprint, request, jsonify, session
 from typing import List, Dict, Any
 from urllib.parse import urlparse
 
@@ -24,10 +25,20 @@ class WebsitesAPI:
         self.blueprint = Blueprint('websites_api', __name__)
         self._setup_routes()
     
+    def _login_required(self, f):
+        """登录验证装饰器"""
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return jsonify({'success': False, 'error': '需要登录', 'redirect': '/login'}), 401
+            return f(*args, **kwargs)
+        return decorated_function
+    
     def _setup_routes(self):
         """设置路由"""
         
         @self.blueprint.route('/api/websites', methods=['GET'])
+        @self._login_required
         def get_websites():
             """获取网站列表"""
             try:
@@ -37,15 +48,19 @@ class WebsitesAPI:
                 search_query = request.args.get('q', '').strip()
                 tags = request.args.getlist('tags')
                 
+                # 获取网站数据和总数
                 if search_query:
                     # 执行搜索
-                    websites = self.websites_manager.search_websites(search_query, tags)
+                    websites = self.websites_manager.search_websites(search_query, tags, limit, offset)
+                    total_count = self.websites_manager.get_websites_count(search_query, tags)
                 elif tags:
                     # 按标签筛选
-                    websites = self.websites_manager.get_websites_by_tags(tags)
+                    websites = self.websites_manager.get_websites_by_tags(tags, limit, offset)
+                    total_count = self.websites_manager.get_websites_count(None, tags)
                 else:
                     # 获取所有网站
                     websites = self.websites_manager.get_all_websites(limit, offset)
+                    total_count = self.websites_manager.get_websites_count()
                 
                 # 转换为字典格式
                 websites_data = []
@@ -71,10 +86,22 @@ class WebsitesAPI:
                     }
                     websites_data.append(website_dict)
                 
+                # 计算分页信息
+                page_size = limit if limit else total_count
+                current_page = (offset // page_size) + 1 if page_size > 0 else 1
+                total_pages = (total_count + page_size - 1) // page_size if page_size > 0 else 1
+                
                 return jsonify({
                     'success': True,
                     'data': websites_data,
-                    'total': len(websites_data)
+                    'pagination': {
+                        'total': total_count,
+                        'page': current_page,
+                        'page_size': page_size,
+                        'total_pages': total_pages,
+                        'has_next': current_page < total_pages,
+                        'has_prev': current_page > 1
+                    }
                 })
                 
             except Exception as e:
@@ -85,6 +112,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites', methods=['POST'])
+        @self._login_required
         def add_website():
             """添加网站"""
             try:
@@ -178,6 +206,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>', methods=['PUT'])
+        @self._login_required
         def update_website(website_id):
             """更新网站"""
             try:
@@ -258,6 +287,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>', methods=['DELETE'])
+        @self._login_required
         def delete_website(website_id):
             """删除网站"""
             try:
@@ -291,6 +321,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>', methods=['GET'])
+        @self._login_required
         def get_website(website_id):
             """获取单个网站"""
             try:
@@ -333,6 +364,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/search', methods=['POST'])
+        @self._login_required
         def search_websites():
             """语义搜索网站"""
             try:
@@ -394,6 +426,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>/visit', methods=['POST'])
+        @self._login_required
         def record_visit(website_id):
             """记录网站访问"""
             try:
@@ -427,6 +460,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/tags', methods=['GET'])
+        @self._login_required
         def get_tags():
             """获取所有标签"""
             try:
@@ -444,6 +478,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/export', methods=['GET'])
+        @self._login_required
         def export_websites():
             """导出网站数据"""
             try:
@@ -462,6 +497,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/import', methods=['POST'])
+        @self._login_required
         def import_websites():
             """导入网站数据"""
             try:
@@ -496,6 +532,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>/accounts', methods=['GET'])
+        @self._login_required
         def get_website_accounts(website_id):
             """获取网站账号列表"""
             try:
@@ -531,6 +568,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>/accounts', methods=['POST'])
+        @self._login_required
         def add_website_account(website_id):
             """添加网站账号"""
             try:
@@ -600,6 +638,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>/accounts/<account_id>', methods=['PUT'])
+        @self._login_required
         def update_website_account(website_id, account_id):
             """更新网站账号"""
             try:
@@ -671,6 +710,7 @@ class WebsitesAPI:
                 }), 500
         
         @self.blueprint.route('/api/websites/<int:website_id>/accounts/<account_id>', methods=['DELETE'])
+        @self._login_required
         def delete_website_account(website_id, account_id):
             """删除网站账号"""
             try:

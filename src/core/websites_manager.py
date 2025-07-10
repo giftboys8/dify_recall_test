@@ -244,7 +244,7 @@ class WebsitesManager:
             self.logger.error(f"获取网站列表失败: {e}")
             raise
     
-    def search_websites(self, query: str, tags: List[str] = None) -> List[Website]:
+    def search_websites(self, query: str, tags: List[str] = None, limit: int = None, offset: int = 0) -> List[Website]:
         """搜索网站（基础文本搜索）"""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -266,6 +266,11 @@ class WebsitesManager:
                 
                 sql_query += " ORDER BY visit_count DESC, updated_at DESC"
                 
+                # 添加分页
+                if limit:
+                    sql_query += " LIMIT ? OFFSET ?"
+                    params.extend([limit, offset])
+                
                 cursor = conn.execute(sql_query, params)
                 rows = cursor.fetchall()
                 
@@ -275,7 +280,7 @@ class WebsitesManager:
             self.logger.error(f"搜索网站失败: {e}")
             raise
     
-    def get_websites_by_tags(self, tags: List[str]) -> List[Website]:
+    def get_websites_by_tags(self, tags: List[str], limit: int = None, offset: int = 0) -> List[Website]:
         """根据标签获取网站"""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -293,6 +298,11 @@ class WebsitesManager:
                     ORDER BY visit_count DESC, updated_at DESC
                 """
                 
+                # 添加分页
+                if limit:
+                    query += " LIMIT ? OFFSET ?"
+                    params.extend([limit, offset])
+                
                 cursor = conn.execute(query, params)
                 rows = cursor.fetchall()
                 
@@ -300,6 +310,50 @@ class WebsitesManager:
             
         except Exception as e:
             self.logger.error(f"根据标签获取网站失败: {e}")
+            raise
+    
+    def get_websites_count(self, search_query: str = None, tags: List[str] = None) -> int:
+        """获取网站总数"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                if search_query:
+                    # 搜索模式下的总数
+                    sql_query = """
+                        SELECT COUNT(*) FROM websites 
+                        WHERE (title LIKE ? OR description LIKE ? OR url LIKE ?)
+                    """
+                    params = [f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"]
+                    
+                    # 标签过滤
+                    if tags:
+                        tag_conditions = []
+                        for tag in tags:
+                            tag_conditions.append("tags LIKE ?")
+                            params.append(f"%{tag}%")
+                        sql_query += " AND (" + " OR ".join(tag_conditions) + ")"
+                    
+                    cursor = conn.execute(sql_query, params)
+                elif tags:
+                    # 标签筛选模式下的总数
+                    tag_conditions = []
+                    params = []
+                    for tag in tags:
+                        tag_conditions.append("tags LIKE ?")
+                        params.append(f"%{tag}%")
+                    
+                    query = f"""
+                        SELECT COUNT(*) FROM websites 
+                        WHERE {' OR '.join(tag_conditions)}
+                    """
+                    cursor = conn.execute(query, params)
+                else:
+                    # 获取所有网站总数
+                    cursor = conn.execute("SELECT COUNT(*) FROM websites")
+                
+                return cursor.fetchone()[0]
+                
+        except Exception as e:
+            self.logger.error(f"获取网站总数失败: {e}")
             raise
     
     def get_all_tags(self) -> List[str]:
