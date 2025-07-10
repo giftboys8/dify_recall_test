@@ -6,14 +6,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    libreoffice \
+    # libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
 COPY requirements.txt .
 
 # 安装Python依赖
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip &&  pip install --no-cache-dir -r requirements.txt
 
 # 安装可选的web界面依赖
 RUN pip install --no-cache-dir streamlit>=1.25.0 plotly>=5.15.0 matplotlib>=3.5.0 seaborn>=0.11.0
