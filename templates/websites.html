@@ -325,8 +325,24 @@
                 <p>点击上方"添加网站"按钮开始收藏您的网站</p>
             </div>
             
+            <!-- 分页控制区域 -->
+            <div class="d-flex justify-content-between align-items-center mt-4" id="paginationControls" style="display: none !important;">
+                <div class="d-flex align-items-center">
+                    <label for="pageSizeSelect" class="form-label me-2 mb-0">每页显示：</label>
+                    <select class="form-select form-select-sm" id="pageSizeSelect" style="width: auto;">
+                        <option value="10">10条</option>
+                        <option value="20" selected>20条</option>
+                        <option value="50">50条</option>
+                        <option value="100">100条</option>
+                    </select>
+                </div>
+                <div id="paginationInfo" class="text-muted small">
+                    <!-- 显示分页信息 -->
+                </div>
+            </div>
+            
             <!-- 分页容器 -->
-            <div id="paginationContainer" class="mt-4">
+            <div id="paginationContainer" class="mt-3">
                 <!-- 动态加载分页控件 -->
             </div>
         </div>

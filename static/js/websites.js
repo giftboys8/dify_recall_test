@@ -47,6 +47,13 @@ class WebsitesManager {
             this.performSearch();
         });
 
+        // 页面大小选择器变化事件
+        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+            this.pagination.pageSize = parseInt(e.target.value);
+            this.pagination.page = 1; // 重置到第一页
+            this.loadWebsites();
+        });
+
         // 添加网站表单提交
         document.getElementById('addWebsiteForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -476,9 +483,34 @@ class WebsitesManager {
      */
     renderPagination() {
         const paginationContainer = document.getElementById('paginationContainer');
+        const paginationControls = document.getElementById('paginationControls');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        
         if (!paginationContainer) return;
         
-        const { page, totalPages, total } = this.pagination;
+        const { page, totalPages, total, pageSize } = this.pagination;
+        
+        // 更新页面大小选择器的值
+        if (pageSizeSelect) {
+            pageSizeSelect.value = pageSize.toString();
+        }
+        
+        // 显示/隐藏分页控制区域
+        if (paginationControls) {
+            if (total > 0) {
+                paginationControls.style.display = 'flex';
+            } else {
+                paginationControls.style.display = 'none';
+            }
+        }
+        
+        // 更新分页信息
+        if (paginationInfo && total > 0) {
+            const startItem = (page - 1) * pageSize + 1;
+            const endItem = Math.min(page * pageSize, total);
+            paginationInfo.innerHTML = `显示第 ${startItem} - ${endItem} 条，共 ${total} 条记录`;
+        }
         
         if (totalPages <= 1) {
             paginationContainer.innerHTML = '';
@@ -542,17 +574,6 @@ class WebsitesManager {
         
         paginationHtml += '</ul>';
         paginationHtml += '</nav>';
-        
-        // 添加分页信息
-        const startItem = (page - 1) * this.pagination.pageSize + 1;
-        const endItem = Math.min(page * this.pagination.pageSize, total);
-        paginationHtml += `
-            <div class="text-center mt-2">
-                <small class="text-muted">
-                    显示第 ${startItem} - ${endItem} 条，共 ${total} 条记录
-                </small>
-            </div>
-        `;
         
         paginationContainer.innerHTML = paginationHtml;
     }
