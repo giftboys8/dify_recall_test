@@ -25,6 +25,12 @@ class WebsitesManager {
      * 初始化
      */
     init() {
+        // 确保分页控制区域初始状态正确
+        const paginationControls = document.getElementById('paginationControls');
+        if (paginationControls) {
+            paginationControls.style.display = 'none';
+        }
+        
         this.loadWebsites();
         this.loadTags();
         this.setupEventListeners();
@@ -339,9 +345,12 @@ class WebsitesManager {
                     };
                 }
                 
-                this.renderWebsites(this.websites);
-                this.renderPagination();
-                this.updateStats();
+                // 批量更新DOM，避免闪跳
+                requestAnimationFrame(() => {
+                    this.renderWebsites(this.websites);
+                    this.renderPagination();
+                    this.updateStats();
+                });
             } else {
                 this.showError('加载网站列表失败: ' + result.error);
             }
@@ -498,9 +507,13 @@ class WebsitesManager {
         
         // 显示/隐藏分页控制区域
         if (paginationControls) {
-            if (total > 0) {
+            const shouldShow = total > 0;
+            const currentDisplay = paginationControls.style.display;
+            const isCurrentlyVisible = currentDisplay === 'flex' || (currentDisplay === '' && total > 0);
+            
+            if (shouldShow && !isCurrentlyVisible) {
                 paginationControls.style.display = 'flex';
-            } else {
+            } else if (!shouldShow && isCurrentlyVisible) {
                 paginationControls.style.display = 'none';
             }
         }
