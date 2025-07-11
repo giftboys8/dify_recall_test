@@ -175,7 +175,7 @@ class IdeasManager {
         if (!tbody) return;
         
         if (this.filteredIdeas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No ideas found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No ideas found</td></tr>';
             return;
         }
         
@@ -195,6 +195,16 @@ class IdeasManager {
                 </td>
                 <td><span class="badge bg-${this.getPriorityColor(idea.priority)}">${this.escapeHtml(idea.priority)}</span></td>
                 <td><span class="badge bg-${this.getStatusColor(idea.status)}">${this.escapeHtml(idea.status.replace('_', ' '))}</span></td>
+                <td>
+                    ${idea.related_links && idea.related_links.length > 0 ? 
+                        idea.related_links.map(link => 
+                            `<a href="${this.escapeHtml(link)}" target="_blank" class="btn btn-sm btn-outline-primary me-1 mb-1" title="${this.escapeHtml(link)}">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>`
+                        ).join('') : 
+                        '<small class="text-muted">No links</small>'
+                    }
+                </td>
                 <td><small>${this.formatDate(idea.created_at)}</small></td>
                 <td>
                     <div class="btn-group btn-group-sm">
@@ -252,6 +262,16 @@ class IdeasManager {
                         <div class="mb-2">
                             ${idea.tags.map(tag => `<span class="badge bg-info me-1">${this.escapeHtml(tag)}</span>`).join('')}
                         </div>
+                        ${idea.related_links && idea.related_links.length > 0 ? 
+                            `<div class="mb-2">
+                                <small class="text-muted d-block mb-1">Related Links:</small>
+                                ${idea.related_links.map(link => 
+                                    `<a href="${this.escapeHtml(link)}" target="_blank" class="btn btn-sm btn-outline-primary me-1 mb-1" title="${this.escapeHtml(link)}">
+                                        <i class="fas fa-external-link-alt me-1"></i>Link
+                                    </a>`
+                                ).join('')}
+                            </div>` : ''
+                        }
                         <small class="text-muted">Created: ${this.formatDate(idea.created_at)}</small>
                     </div>
                     <div class="card-footer">
@@ -312,6 +332,15 @@ class IdeasManager {
                                                    value="${idea.id}" ${this.selectedIdeas.has(idea.id) ? 'checked' : ''}>
                                         </div>
                                         <p class="card-text small">${this.escapeHtml(idea.description?.substring(0, 80) || '')}${idea.description?.length > 80 ? '...' : ''}</p>
+                                        ${idea.related_links && idea.related_links.length > 0 ? 
+                                            `<div class="mb-2">
+                                                ${idea.related_links.map(link => 
+                                                    `<a href="${this.escapeHtml(link)}" target="_blank" class="btn btn-xs btn-outline-primary me-1 mb-1" title="${this.escapeHtml(link)}" style="font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                                        <i class="fas fa-external-link-alt"></i>
+                                                    </a>`
+                                                ).join('')}
+                                            </div>` : ''
+                                        }
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span class="badge bg-${this.getPriorityColor(idea.priority)}">${this.escapeHtml(idea.priority)}</span>
                                             <div class="btn-group btn-group-sm">
