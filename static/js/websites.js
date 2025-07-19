@@ -409,7 +409,22 @@ class WebsitesManager {
         
         emptyState.style.display = 'none';
         
-        tbody.innerHTML = websites.map(website => `
+        tbody.innerHTML = websites.map(website => {
+            // 字符截断函数
+            const truncateText = (text, maxLength) => {
+                if (!text) return '';
+                return text.length > maxLength ? text.substring(0, maxLength) : text;
+            };
+            
+            const title = website.title || '未知标题';
+            const url = website.url || '';
+            const description = website.description || '暂无描述';
+            
+            const truncatedTitle = truncateText(title, 8);
+            const truncatedUrl = truncateText(url, 30);
+            const truncatedDescription = truncateText(description, 10);
+            
+            return `
             <tr>
                 <td>
                     <img src="${website.favicon_url || '/static/images/default-favicon.png'}" 
@@ -418,26 +433,34 @@ class WebsitesManager {
                          alt="favicon">
                 </td>
                 <td>
-                    <div class="website-title" title="${website.title || ''}">
-                        ${website.title || '未知标题'}
+                    <div class="website-title expandable-content content-collapsed" 
+                         data-full-text="${this.escapeHtml(title)}" 
+                         data-truncated="${this.escapeHtml(truncatedTitle)}">
+                        <span class="content-text">${this.escapeHtml(truncatedTitle)}</span>${title.length > 8 ? '<span class="expand-toggle" onclick="websitesManager.toggleContent(this)">...</span>' : ''}
                     </div>
                 </td>
                 <td>
-                    <div class="website-url" title="${website.url}">
-                        <a href="${website.url}" target="_blank" 
-                           onclick="websitesManager.recordVisit(${website.id})">
-                            ${website.url}
-                        </a>
+                    <div class="website-url expandable-content content-collapsed" 
+                         data-full-text="${this.escapeHtml(url)}" 
+                         data-truncated="${this.escapeHtml(truncatedUrl)}">
+                        <span class="content-text">
+                            <a href="${url}" target="_blank" 
+                               onclick="websitesManager.recordVisit(${website.id})">
+                                ${this.escapeHtml(truncatedUrl)}
+                            </a>
+                        </span>${url.length > 30 ? '<span class="expand-toggle" onclick="websitesManager.toggleContent(this)">...</span>' : ''}
                     </div>
                 </td>
                 <td>
-                    <div class="website-description" title="${website.description || ''}">
-                        ${website.description || '暂无描述'}
+                    <div class="website-description expandable-content content-collapsed" 
+                         data-full-text="${this.escapeHtml(description)}" 
+                         data-truncated="${this.escapeHtml(truncatedDescription)}">
+                        <span class="content-text">${this.escapeHtml(truncatedDescription)}</span>${description.length > 10 ? '<span class="expand-toggle" onclick="websitesManager.toggleContent(this)">...</span>' : ''}
                     </div>
                 </td>
                 <td>
                     ${website.tags.map(tag => 
-                        `<span class="badge bg-secondary tag-badge">${tag}</span>`
+                        `<span class="badge bg-secondary tag-badge">${this.escapeHtml(tag)}</span>`
                     ).join('')}
                 </td>
                 <td>
@@ -469,7 +492,7 @@ class WebsitesManager {
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-outline-success" 
-                                    onclick="websitesManager.visitWebsite('${website.url}', ${website.id})" 
+                                    onclick="websitesManager.visitWebsite('${this.escapeHtml(website.url)}', ${website.id})" 
                                     title="访问" 
                                     aria-label="访问网站">
                                 <i class="bi bi-box-arrow-up-right"></i>
@@ -484,7 +507,52 @@ class WebsitesManager {
                     </div>
                 </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
+    }
+    
+    /**
+     * 切换内容展开/收起状态
+     */
+    toggleContent(toggleElement) {
+        const container = toggleElement.closest('.expandable-content');
+        const contentText = container.querySelector('.content-text');
+        const fullText = container.getAttribute('data-full-text');
+        const truncatedText = container.getAttribute('data-truncated');
+        
+        if (container.classList.contains('content-collapsed')) {
+            // 展开内容
+            container.classList.remove('content-collapsed');
+            container.classList.add('content-expanded');
+            
+            // 更新内容和切换按钮
+            if (container.classList.contains('website-url')) {
+                // URL特殊处理，保持链接功能
+                const link = contentText.querySelector('a');
+                if (link) {
+                    link.textContent = fullText;
+                }
+            } else {
+                contentText.textContent = fullText;
+            }
+            toggleElement.textContent = '收起';
+        } else {
+            // 收起内容
+            container.classList.remove('content-expanded');
+            container.classList.add('content-collapsed');
+            
+            // 恢复截断内容和切换按钮
+            if (container.classList.contains('website-url')) {
+                // URL特殊处理，保持链接功能
+                const link = contentText.querySelector('a');
+                if (link) {
+                    link.textContent = truncatedText;
+                }
+            } else {
+                contentText.textContent = truncatedText;
+            }
+            toggleElement.textContent = '...';
+        }
     }
 
     /**

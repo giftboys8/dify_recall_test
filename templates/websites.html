@@ -36,20 +36,63 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            cursor: pointer;
         }
         
         .website-title {
-            max-width: 250px;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        
+        .website-description {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        
+        /* 展开/收起内容样式 */
+        .expandable-content {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .expand-toggle {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+            margin-left: 2px;
+        }
+        
+        .expand-toggle:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        
+        .content-expanded {
+            word-break: break-all;
+            white-space: normal;
+        }
+        
+        .content-collapsed {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
         
-        .website-description {
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        /* 确保表格单元格不会裁剪tooltip */
+        .website-table td {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .table-responsive {
+            overflow: visible;
         }
         
         .tag-badge {
