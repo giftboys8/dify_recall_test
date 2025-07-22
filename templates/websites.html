@@ -126,9 +126,69 @@
             background-color: #f8f9fa;
             border-right: 1px solid #dee2e6;
             min-height: calc(100vh - 56px);
+            transition: margin-left 0.3s ease;
+            position: relative;
         }
+        
+        .sidebar.collapsed {
+            display: none;
+        }
+        
+        .sidebar-toggle {
+            position: absolute;
+            top: 10px;
+            right: -40px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            padding: 8px 10px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .sidebar-toggle-collapsed {
+            position: fixed;
+            top: 70px;
+            left: 10px;
+            background: #dc3545 !important; /* 红色调试背景 - 默认隐藏状态 */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 10px;
+            cursor: pointer;
+            z-index: 9999;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            display: block !important; /* 强制显示用于调试 */
+        }
+        
+        .container-fluid:has(.row.sidebar-collapsed) .sidebar-toggle-collapsed {
+            display: block !important;
+            background: #28a745 !important; /* 绿色调试背景 - 收起状态 */
+        }
+        
+        /* 备用选择器，以防:has不被支持 */
+        body.sidebar-collapsed .sidebar-toggle-collapsed {
+            display: block !important;
+            background: #28a745 !important; /* 绿色调试背景 - 收起状态 */
+        }
+        
+        .sidebar-toggle:hover,
+        .sidebar-toggle-collapsed:hover {
+            background: #0056b3;
+        }
+        
         .main-content {
             min-height: calc(100vh - 56px);
+            transition: all 0.3s ease;
+        }
+        
+        .row.sidebar-collapsed .main-content {
+            flex: 0 0 100%;
+            max-width: 100%;
         }
         .filter-section {
             background-color: white;
@@ -231,9 +291,18 @@
     </nav>
 
     <div class="container-fluid">
-        <div class="row">
+        <!-- 收起状态的按钮 -->
+        <button class="sidebar-toggle-collapsed" id="sidebarToggleCollapsed" onclick="toggleSidebar()" title="展开侧边栏">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        
+        <div class="row" id="mainRow">
             <!-- Sidebar -->
-            <div class="col-md-3 sidebar p-3">
+            <div class="col-md-3 sidebar p-3" id="sidebar">
+                <!-- 收起按钮 -->
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="收起/展开侧边栏" data-version="3">
+                    <i class="fas fa-chevron-left" id="toggleIcon"></i>
+                </button>
                 <!-- Statistics -->
                 <div class="card statistics-card mb-4">
                     <div class="card-body text-center">
@@ -314,7 +383,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 main-content p-3">
+            <div class="col-md-9 main-content p-3" id="mainContent">
                 <!-- Header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2>

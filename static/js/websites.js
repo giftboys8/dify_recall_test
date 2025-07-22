@@ -1490,6 +1490,76 @@ window.performSearch = () => websitesManager.performSearch();
 window.clearSearch = () => websitesManager.clearSearch();
 window.addWebsite = () => websitesManager.addWebsite();
 window.updateWebsite = () => websitesManager.updateWebsite();
+
+// 全局函数
 window.exportWebsites = () => websitesManager.exportWebsites();
 window.importWebsites = () => websitesManager.importWebsites();
 window.clearAllWebsites = () => websitesManager.clearAllWebsites();
+
+// 侧边栏收起功能
+function toggleSidebar() {
+    // 确保DOM已加载
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', toggleSidebar);
+        return;
+    }
+    
+    try {
+        // 添加延迟确保DOM完全渲染
+        setTimeout(() => {
+            const sidebar = document.getElementById('sidebar');
+            let mainRow = document.getElementById('mainRow');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            // 如果找不到mainRow，尝试查找.row元素
+            if (!mainRow) {
+                const rows = document.querySelectorAll('.row');
+                console.log('Found rows:', rows.length);
+                for (let i = 0; i < rows.length; i++) {
+                    console.log('Row', i, 'id:', rows[i].id, 'classes:', rows[i].className);
+                    if (rows[i].querySelector('#sidebar')) {
+                        mainRow = rows[i];
+                        console.log('Found mainRow by sidebar parent');
+                        break;
+                    }
+                }
+            }
+            
+            console.log('Elements found:', {
+                sidebar: !!sidebar,
+                mainRow: !!mainRow,
+                toggleIcon: !!toggleIcon
+            });
+            
+            if (!sidebar) {
+                console.error('Sidebar element not found');
+                return;
+            }
+            
+            if (!mainRow) {
+                console.error('MainRow element not found');
+                return;
+            }
+            
+            sidebar.classList.toggle('collapsed');
+            mainRow.classList.toggle('sidebar-collapsed');
+            document.body.classList.toggle('sidebar-collapsed');
+            
+            // 更新图标（如果存在）
+            if (toggleIcon) {
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleIcon.className = 'fas fa-chevron-right';
+                } else {
+                    toggleIcon.className = 'fas fa-chevron-left';
+                }
+            }
+            
+            console.log('Sidebar toggled successfully');
+        }, 100);
+    } catch (error) {
+        console.error('Error in toggleSidebar:', error);
+    }
+}
+
+// 确保函数在全局作用域可用
+window.toggleSidebar = toggleSidebar;
