@@ -16,7 +16,14 @@ COPY requirements.txt .
 RUN pip install --upgrade pip &&  pip install --no-cache-dir -r requirements.txt
 
 # 安装可选的web界面依赖
-RUN pip install --no-cache-dir streamlit>=1.25.0 plotly>=5.15.0 matplotlib>=3.5.0 seaborn>=0.11.0
+RUN pip install --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    streamlit>=1.25.0 \
+    plotly>=5.15.0 \
+    matplotlib>=3.5.0 \
+    seaborn>=0.11.0
+
 
 # 复制应用代码
 COPY . .
