@@ -125,7 +125,7 @@ class WebInterface:
         
         # 默认用户配置（实际应用中应该从数据库或配置文件读取）
         self.users = {
-            'admin': self._hash_password('admin123'),
+            'admin': self._hash_password('Edwinai*[]12'),
             'user': self._hash_password('user123')
         }
         
@@ -766,6 +766,16 @@ class WebInterface:
             
             except Exception as e:
                 return jsonify({'success': False, 'error': str(e)}), 500
+        
+        @self.app.route('/favicon.ico')
+        def favicon():
+            """Serve favicon.ico."""
+            return send_file(os.path.join(self.app.static_folder, 'favicon.ico'), mimetype='image/vnd.microsoft.icon')
+        
+        @self.app.route('/favicon-32x32.png')
+        def favicon_32x32():
+            """Serve favicon-32x32.png."""
+            return send_file(os.path.join(self.app.static_folder, 'favicon-32x32.png'), mimetype='image/png')
     
     def run(self, host='127.0.0.1', port=8080, debug=False):
         """Run the web server."""
