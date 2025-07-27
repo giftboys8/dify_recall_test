@@ -427,9 +427,9 @@ class WebsitesManager {
             return `
             <tr>
                 <td>
-                    <img src="${website.favicon_url || '/static/images/default-favicon.png'}" 
+                    <img src="${website.favicon_url || '/static/images/default-favicon.svg'}" 
                          class="website-favicon" 
-                         onerror="this.src='/static/images/default-favicon.png'" 
+                         onerror="this.src='/static/images/default-favicon.svg'" 
                          alt="favicon">
                 </td>
                 <td>
